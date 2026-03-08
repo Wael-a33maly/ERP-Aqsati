@@ -1,91 +1,107 @@
-/**
- * Notification Repository
- * مستودع بيانات الإشعارات
- */
+// ============================================
+// Notification Repository - مستودع الإشعارات
+// ============================================
 
 import { db } from '@/lib/db'
-import type { NotificationQueryParams, NotificationInput } from '@/models/notification.model'
+import { 
+  NotificationQueryParams, 
+  CreateNotificationInput,
+  Notification 
+} from '@/models/notification.model'
 
 export const notificationRepository = {
-  async findNotifications(params: NotificationQueryParams) {
-    const { page = 1, limit = 20, userId, type, read } = params
-    const skip = (page - 1) * limit
-
+  // الحصول على إشعارات المستخدم
+  async findMany(params: NotificationQueryParams): Promise<Notification[]> {
     const where: any = {}
-    if (userId) where.userId = userId
-    if (type) where.type = type
-    if (read !== undefined) where.read = read
+    
+    if (params.userId) where.userId = params.userId
+    if (params.unreadOnly) where.isRead = false
+    if (params.type) where.type = params.type
+    if (params.priority) where.priority = params.priority
 
-    const [notifications, total] = await Promise.all([
-      db.notification.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy: { createdAt: 'desc' }
-      }),
-      db.notification.count({ where })
-    ])
-
-    return { data: notifications, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } }
-  },
-
-  async findNotificationById(id: string) {
-    return db.notification.findUnique({
-      where: { id }
+    return db.notification.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      take: params.limit || 50,
     })
   },
 
-  async createNotification(data: NotificationInput) {
+  // عدد الإشعارات غير المقروءة
+  async countUnread(userId: string): Promise<number> {
+    return db.notification.count({
+      where: { 
+        userId, 
+        isRead: false 
+      },
+    })
+  },
+
+  // التحقق من وجود إشعارات عاجلة
+  async hasUrgentUnread(userId: string): Promise<boolean> {
+    const count = await db.notification.count({
+      where: { 
+        userId, 
+        isRead: false,
+        priority: 'urgent'
+      },
+    })
+    return count > 0
+  },
+
+  // إنشاء إشعار جديد
+  async create(data: CreateNotificationInput): Promise<Notification> {
     return db.notification.create({
       data: {
+        id: crypto.randomUUID(),
         userId: data.userId,
         title: data.title,
-        titleAr: data.titleAr,
         message: data.message,
-        messageAr: data.messageAr,
         type: data.type,
-        link: data.link,
-        data: data.data || {},
-        read: false
-      }
+        priority: data.priority || 'medium',
+        link: data.link || null,
+        metadata: data.metadata ? JSON.stringify(data.metadata) : null,
+      },
     })
   },
 
-  async markAsRead(id: string) {
-    return db.notification.update({
-      where: { id },
-      data: { read: true, readAt: new Date() }
-    })
-  },
-
-  async markAllAsRead(userId: string) {
-    return db.notification.updateMany({
-      where: { userId, read: false },
-      data: { read: true, readAt: new Date() }
-    })
-  },
-
-  async getUnreadCount(userId: string) {
-    return db.notification.count({
-      where: { userId, read: false }
-    })
-  },
-
-  async deleteNotification(id: string) {
-    return db.notification.delete({
-      where: { id }
-    })
-  },
-
-  async deleteOldNotifications(daysOld: number = 30) {
-    const date = new Date()
-    date.setDate(date.getDate() - daysOld)
-
-    return db.notification.deleteMany({
+  // تحديد إشعارات كمقروءة
+  async markAsRead(userId: string, notificationIds: string[]): Promise<number> {
+    const result = await db.notification.updateMany({
       where: {
-        createdAt: { lt: date },
-        read: true
-      }
+        id: { in: notificationIds },
+        userId,
+      },
+      data: {
+        isRead: true,
+        readAt: new Date(),
+      },
     })
-  }
+    return result.count
+  },
+
+  // تحديد جميع الإشعارات كمقروءة
+  async markAllAsRead(userId: string): Promise<number> {
+    const result = await db.notification.updateMany({
+      where: {
+        userId,
+        isRead: false,
+      },
+      data: {
+        isRead: true,
+        readAt: new Date(),
+      },
+    })
+    return result.count
+  },
+
+  // حذف إشعار
+  async delete(userId: string, id: string): Promise<boolean> {
+    const result = await db.notification.deleteMany({
+      where: {
+        id,
+        userId,
+      },
+    })
+    return result.count > 0
+  },
 }
