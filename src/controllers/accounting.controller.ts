@@ -11,7 +11,7 @@ export class AccountingController {
     try {
       const auth = await getAuth(req);
       if (!auth?.companyId) {
-        return NextResponse.json({ error: 'غير مصرح' }, { status: 401 });
+        return NextResponse.json({ success: false, error: 'غير مصرح' }, { status: 401 });
       }
 
       const { searchParams } = new URL(req.url);
@@ -24,9 +24,9 @@ export class AccountingController {
       };
 
       const accounts = await accountingService.getAccountsByCompany(auth.companyId, filters);
-      return NextResponse.json(accounts);
+      return NextResponse.json({ success: true, data: accounts });
     } catch (error: any) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
     }
   }
 
@@ -34,13 +34,13 @@ export class AccountingController {
     try {
       const auth = await getAuth(req);
       if (!auth?.companyId) {
-        return NextResponse.json({ error: 'غير مصرح' }, { status: 401 });
+        return NextResponse.json({ success: false, error: 'غير مصرح' }, { status: 401 });
       }
 
       const tree = await accountingService.getAccountTree(auth.companyId);
-      return NextResponse.json(tree);
+      return NextResponse.json({ success: true, data: tree });
     } catch (error: any) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
     }
   }
 
@@ -48,17 +48,17 @@ export class AccountingController {
     try {
       const auth = await getAuth(req);
       if (!auth?.companyId) {
-        return NextResponse.json({ error: 'غير مصرح' }, { status: 401 });
+        return NextResponse.json({ success: false, error: 'غير مصرح' }, { status: 401 });
       }
 
       const account = await accountingService.getAccountById(params.id);
       if (!account) {
-        return NextResponse.json({ error: 'الحساب غير موجود' }, { status: 404 });
+        return NextResponse.json({ success: false, error: 'الحساب غير موجود' }, { status: 404 });
       }
 
-      return NextResponse.json(account);
+      return NextResponse.json({ success: true, data: account });
     } catch (error: any) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
     }
   }
 
@@ -66,14 +66,14 @@ export class AccountingController {
     try {
       const auth = await getAuth(req);
       if (!auth?.companyId) {
-        return NextResponse.json({ error: 'غير مصرح' }, { status: 401 });
+        return NextResponse.json({ success: false, error: 'غير مصرح' }, { status: 401 });
       }
 
       const data = await req.json();
       const account = await accountingService.createAccount(auth.companyId, data);
-      return NextResponse.json(account, { status: 201 });
+      return NextResponse.json({ success: true, data: account }, { status: 201 });
     } catch (error: any) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
     }
   }
 
@@ -81,14 +81,14 @@ export class AccountingController {
     try {
       const auth = await getAuth(req);
       if (!auth?.companyId) {
-        return NextResponse.json({ error: 'غير مصرح' }, { status: 401 });
+        return NextResponse.json({ success: false, error: 'غير مصرح' }, { status: 401 });
       }
 
       const data = await req.json();
       const account = await accountingService.updateAccount(params.id, data);
-      return NextResponse.json(account);
+      return NextResponse.json({ success: true, data: account });
     } catch (error: any) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
     }
   }
 
@@ -96,13 +96,13 @@ export class AccountingController {
     try {
       const auth = await getAuth(req);
       if (!auth?.companyId) {
-        return NextResponse.json({ error: 'غير مصرح' }, { status: 401 });
+        return NextResponse.json({ success: false, error: 'غير مصرح' }, { status: 401 });
       }
 
       await accountingService.deleteAccount(params.id);
-      return NextResponse.json({ success: true });
+      return NextResponse.json({ success: true, message: 'تم حذف الحساب بنجاح' });
     } catch (error: any) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
     }
   }
 
@@ -110,16 +110,16 @@ export class AccountingController {
     try {
       const auth = await getAuth(req);
       if (!auth?.companyId) {
-        return NextResponse.json({ error: 'غير مصرح' }, { status: 401 });
+        return NextResponse.json({ success: false, error: 'غير مصرح' }, { status: 401 });
       }
 
       const { searchParams } = new URL(req.url);
       const asOfDate = searchParams.get('asOfDate') ? new Date(searchParams.get('asOfDate')!) : undefined;
 
       const balance = await accountingService.getAccountBalance(params.id, asOfDate);
-      return NextResponse.json(balance);
+      return NextResponse.json({ success: true, data: balance });
     } catch (error: any) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
     }
   }
 
@@ -127,16 +127,16 @@ export class AccountingController {
     try {
       const auth = await getAuth(req);
       if (!auth?.companyId) {
-        return NextResponse.json({ error: 'غير مصرح' }, { status: 401 });
+        return NextResponse.json({ success: false, error: 'غير مصرح' }, { status: 401 });
       }
 
       const { searchParams } = new URL(req.url);
       const parentId = searchParams.get('parentId') || undefined;
 
       const code = await accountingService.getNextAccountCode(auth.companyId, parentId);
-      return NextResponse.json({ code });
+      return NextResponse.json({ success: true, data: { code } });
     } catch (error: any) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
     }
   }
 
@@ -146,13 +146,13 @@ export class AccountingController {
     try {
       const auth = await getAuth(req);
       if (!auth?.companyId) {
-        return NextResponse.json({ error: 'غير مصرح' }, { status: 401 });
+        return NextResponse.json({ success: false, error: 'غير مصرح' }, { status: 401 });
       }
 
       const fiscalYears = await accountingService.getFiscalYearsByCompany(auth.companyId);
-      return NextResponse.json(fiscalYears);
+      return NextResponse.json({ success: true, data: fiscalYears });
     } catch (error: any) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
     }
   }
 
@@ -160,13 +160,13 @@ export class AccountingController {
     try {
       const auth = await getAuth(req);
       if (!auth?.companyId) {
-        return NextResponse.json({ error: 'غير مصرح' }, { status: 401 });
+        return NextResponse.json({ success: false, error: 'غير مصرح' }, { status: 401 });
       }
 
       const fiscalYear = await accountingService.getCurrentFiscalYear(auth.companyId);
-      return NextResponse.json(fiscalYear);
+      return NextResponse.json({ success: true, data: fiscalYear });
     } catch (error: any) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
     }
   }
 
@@ -174,17 +174,17 @@ export class AccountingController {
     try {
       const auth = await getAuth(req);
       if (!auth?.companyId) {
-        return NextResponse.json({ error: 'غير مصرح' }, { status: 401 });
+        return NextResponse.json({ success: false, error: 'غير مصرح' }, { status: 401 });
       }
 
       const fiscalYear = await accountingService.getFiscalYearById(params.id);
       if (!fiscalYear) {
-        return NextResponse.json({ error: 'السنة المالية غير موجودة' }, { status: 404 });
+        return NextResponse.json({ success: false, error: 'السنة المالية غير موجودة' }, { status: 404 });
       }
 
-      return NextResponse.json(fiscalYear);
+      return NextResponse.json({ success: true, data: fiscalYear });
     } catch (error: any) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
     }
   }
 
@@ -192,14 +192,14 @@ export class AccountingController {
     try {
       const auth = await getAuth(req);
       if (!auth?.companyId) {
-        return NextResponse.json({ error: 'غير مصرح' }, { status: 401 });
+        return NextResponse.json({ success: false, error: 'غير مصرح' }, { status: 401 });
       }
 
       const data = await req.json();
       const fiscalYear = await accountingService.createFiscalYear(auth.companyId, data);
-      return NextResponse.json(fiscalYear, { status: 201 });
+      return NextResponse.json({ success: true, data: fiscalYear }, { status: 201 });
     } catch (error: any) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
     }
   }
 
@@ -207,14 +207,14 @@ export class AccountingController {
     try {
       const auth = await getAuth(req);
       if (!auth?.companyId) {
-        return NextResponse.json({ error: 'غير مصرح' }, { status: 401 });
+        return NextResponse.json({ success: false, error: 'غير مصرح' }, { status: 401 });
       }
 
       const data = await req.json();
       const fiscalYear = await accountingService.updateFiscalYear(params.id, data);
-      return NextResponse.json(fiscalYear);
+      return NextResponse.json({ success: true, data: fiscalYear });
     } catch (error: any) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
     }
   }
 
@@ -222,13 +222,13 @@ export class AccountingController {
     try {
       const auth = await getAuth(req);
       if (!auth?.companyId) {
-        return NextResponse.json({ error: 'غير مصرح' }, { status: 401 });
+        return NextResponse.json({ success: false, error: 'غير مصرح' }, { status: 401 });
       }
 
       const fiscalYear = await accountingService.setCurrentFiscalYear(auth.companyId, params.id);
-      return NextResponse.json(fiscalYear);
+      return NextResponse.json({ success: true, data: fiscalYear });
     } catch (error: any) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
     }
   }
 
@@ -236,13 +236,13 @@ export class AccountingController {
     try {
       const auth = await getAuth(req);
       if (!auth?.companyId) {
-        return NextResponse.json({ error: 'غير مصرح' }, { status: 401 });
+        return NextResponse.json({ success: false, error: 'غير مصرح' }, { status: 401 });
       }
 
       const fiscalYear = await accountingService.closeFiscalYear(params.id, auth.userId);
-      return NextResponse.json(fiscalYear);
+      return NextResponse.json({ success: true, data: fiscalYear });
     } catch (error: any) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
     }
   }
 
@@ -252,7 +252,7 @@ export class AccountingController {
     try {
       const auth = await getAuth(req);
       if (!auth?.companyId) {
-        return NextResponse.json({ error: 'غير مصرح' }, { status: 401 });
+        return NextResponse.json({ success: false, error: 'غير مصرح' }, { status: 401 });
       }
 
       const { searchParams } = new URL(req.url);
@@ -267,9 +267,9 @@ export class AccountingController {
       };
 
       const entries = await accountingService.getJournalEntriesByCompany(auth.companyId, filters);
-      return NextResponse.json(entries);
+      return NextResponse.json({ success: true, data: entries });
     } catch (error: any) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
     }
   }
 
@@ -277,17 +277,17 @@ export class AccountingController {
     try {
       const auth = await getAuth(req);
       if (!auth?.companyId) {
-        return NextResponse.json({ error: 'غير مصرح' }, { status: 401 });
+        return NextResponse.json({ success: false, error: 'غير مصرح' }, { status: 401 });
       }
 
       const entry = await accountingService.getJournalEntryById(params.id);
       if (!entry) {
-        return NextResponse.json({ error: 'القيد غير موجود' }, { status: 404 });
+        return NextResponse.json({ success: false, error: 'القيد غير موجود' }, { status: 404 });
       }
 
-      return NextResponse.json(entry);
+      return NextResponse.json({ success: true, data: entry });
     } catch (error: any) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
     }
   }
 
@@ -295,14 +295,14 @@ export class AccountingController {
     try {
       const auth = await getAuth(req);
       if (!auth?.companyId) {
-        return NextResponse.json({ error: 'غير مصرح' }, { status: 401 });
+        return NextResponse.json({ success: false, error: 'غير مصرح' }, { status: 401 });
       }
 
       const data = await req.json();
       const entry = await accountingService.createJournalEntry(auth.companyId, auth.userId, data);
-      return NextResponse.json(entry, { status: 201 });
+      return NextResponse.json({ success: true, data: entry }, { status: 201 });
     } catch (error: any) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
     }
   }
 
@@ -310,14 +310,14 @@ export class AccountingController {
     try {
       const auth = await getAuth(req);
       if (!auth?.companyId) {
-        return NextResponse.json({ error: 'غير مصرح' }, { status: 401 });
+        return NextResponse.json({ success: false, error: 'غير مصرح' }, { status: 401 });
       }
 
       const data = await req.json();
       const entry = await accountingService.updateJournalEntry(params.id, data);
-      return NextResponse.json(entry);
+      return NextResponse.json({ success: true, data: entry });
     } catch (error: any) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
     }
   }
 
@@ -325,13 +325,13 @@ export class AccountingController {
     try {
       const auth = await getAuth(req);
       if (!auth?.companyId) {
-        return NextResponse.json({ error: 'غير مصرح' }, { status: 401 });
+        return NextResponse.json({ success: false, error: 'غير مصرح' }, { status: 401 });
       }
 
       await accountingService.deleteJournalEntry(params.id);
-      return NextResponse.json({ success: true });
+      return NextResponse.json({ success: true, message: 'تم حذف القيد بنجاح' });
     } catch (error: any) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
     }
   }
 
@@ -339,13 +339,13 @@ export class AccountingController {
     try {
       const auth = await getAuth(req);
       if (!auth?.companyId) {
-        return NextResponse.json({ error: 'غير مصرح' }, { status: 401 });
+        return NextResponse.json({ success: false, error: 'غير مصرح' }, { status: 401 });
       }
 
       const entry = await accountingService.approveJournalEntry(params.id, auth.userId);
-      return NextResponse.json(entry);
+      return NextResponse.json({ success: true, data: entry });
     } catch (error: any) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
     }
   }
 
@@ -353,14 +353,14 @@ export class AccountingController {
     try {
       const auth = await getAuth(req);
       if (!auth?.companyId) {
-        return NextResponse.json({ error: 'غير مصرح' }, { status: 401 });
+        return NextResponse.json({ success: false, error: 'غير مصرح' }, { status: 401 });
       }
 
       const data = await req.json();
       const entry = await accountingService.cancelJournalEntry(params.id, auth.userId, data.reason);
-      return NextResponse.json(entry);
+      return NextResponse.json({ success: true, data: entry });
     } catch (error: any) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
     }
   }
 
@@ -370,7 +370,7 @@ export class AccountingController {
     try {
       const auth = await getAuth(req);
       if (!auth?.companyId) {
-        return NextResponse.json({ error: 'غير مصرح' }, { status: 401 });
+        return NextResponse.json({ success: false, error: 'غير مصرح' }, { status: 401 });
       }
 
       const { searchParams } = new URL(req.url);
@@ -385,9 +385,9 @@ export class AccountingController {
       };
 
       const vouchers = await accountingService.getVouchersByCompany(auth.companyId, filters);
-      return NextResponse.json(vouchers);
+      return NextResponse.json({ success: true, data: vouchers });
     } catch (error: any) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
     }
   }
 
@@ -395,17 +395,17 @@ export class AccountingController {
     try {
       const auth = await getAuth(req);
       if (!auth?.companyId) {
-        return NextResponse.json({ error: 'غير مصرح' }, { status: 401 });
+        return NextResponse.json({ success: false, error: 'غير مصرح' }, { status: 401 });
       }
 
       const voucher = await accountingService.getVoucherById(params.id);
       if (!voucher) {
-        return NextResponse.json({ error: 'السند غير موجود' }, { status: 404 });
+        return NextResponse.json({ success: false, error: 'السند غير موجود' }, { status: 404 });
       }
 
-      return NextResponse.json(voucher);
+      return NextResponse.json({ success: true, data: voucher });
     } catch (error: any) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
     }
   }
 
@@ -413,14 +413,14 @@ export class AccountingController {
     try {
       const auth = await getAuth(req);
       if (!auth?.companyId) {
-        return NextResponse.json({ error: 'غير مصرح' }, { status: 401 });
+        return NextResponse.json({ success: false, error: 'غير مصرح' }, { status: 401 });
       }
 
       const data = await req.json();
       const voucher = await accountingService.createVoucher(auth.companyId, auth.userId, data);
-      return NextResponse.json(voucher, { status: 201 });
+      return NextResponse.json({ success: true, data: voucher }, { status: 201 });
     } catch (error: any) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
     }
   }
 
@@ -428,14 +428,14 @@ export class AccountingController {
     try {
       const auth = await getAuth(req);
       if (!auth?.companyId) {
-        return NextResponse.json({ error: 'غير مصرح' }, { status: 401 });
+        return NextResponse.json({ success: false, error: 'غير مصرح' }, { status: 401 });
       }
 
       const data = await req.json();
       const voucher = await accountingService.updateVoucher(params.id, data);
-      return NextResponse.json(voucher);
+      return NextResponse.json({ success: true, data: voucher });
     } catch (error: any) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
     }
   }
 
@@ -443,13 +443,13 @@ export class AccountingController {
     try {
       const auth = await getAuth(req);
       if (!auth?.companyId) {
-        return NextResponse.json({ error: 'غير مصرح' }, { status: 401 });
+        return NextResponse.json({ success: false, error: 'غير مصرح' }, { status: 401 });
       }
 
       await accountingService.deleteVoucher(params.id);
-      return NextResponse.json({ success: true });
+      return NextResponse.json({ success: true, message: 'تم حذف السند بنجاح' });
     } catch (error: any) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
     }
   }
 
@@ -457,13 +457,13 @@ export class AccountingController {
     try {
       const auth = await getAuth(req);
       if (!auth?.companyId) {
-        return NextResponse.json({ error: 'غير مصرح' }, { status: 401 });
+        return NextResponse.json({ success: false, error: 'غير مصرح' }, { status: 401 });
       }
 
       const voucher = await accountingService.approveVoucher(params.id, auth.userId);
-      return NextResponse.json(voucher);
+      return NextResponse.json({ success: true, data: voucher });
     } catch (error: any) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
     }
   }
 
@@ -471,14 +471,14 @@ export class AccountingController {
     try {
       const auth = await getAuth(req);
       if (!auth?.companyId) {
-        return NextResponse.json({ error: 'غير مصرح' }, { status: 401 });
+        return NextResponse.json({ success: false, error: 'غير مصرح' }, { status: 401 });
       }
 
       const data = await req.json();
       const voucher = await accountingService.cancelVoucher(params.id, auth.userId, data.reason);
-      return NextResponse.json(voucher);
+      return NextResponse.json({ success: true, data: voucher });
     } catch (error: any) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
     }
   }
 
@@ -488,16 +488,16 @@ export class AccountingController {
     try {
       const auth = await getAuth(req);
       if (!auth?.companyId) {
-        return NextResponse.json({ error: 'غير مصرح' }, { status: 401 });
+        return NextResponse.json({ success: false, error: 'غير مصرح' }, { status: 401 });
       }
 
       const { searchParams } = new URL(req.url);
       const asOfDate = searchParams.get('asOfDate') ? new Date(searchParams.get('asOfDate')!) : new Date();
 
       const trialBalance = await accountingService.getTrialBalance(auth.companyId, asOfDate);
-      return NextResponse.json(trialBalance);
+      return NextResponse.json({ success: true, data: trialBalance });
     } catch (error: any) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
     }
   }
 
@@ -505,7 +505,7 @@ export class AccountingController {
     try {
       const auth = await getAuth(req);
       if (!auth?.companyId) {
-        return NextResponse.json({ error: 'غير مصرح' }, { status: 401 });
+        return NextResponse.json({ success: false, error: 'غير مصرح' }, { status: 401 });
       }
 
       const { searchParams } = new URL(req.url);
@@ -513,9 +513,9 @@ export class AccountingController {
       const toDate = searchParams.get('toDate') ? new Date(searchParams.get('toDate')!) : new Date();
 
       const incomeStatement = await accountingService.getIncomeStatement(auth.companyId, fromDate, toDate);
-      return NextResponse.json(incomeStatement);
+      return NextResponse.json({ success: true, data: incomeStatement });
     } catch (error: any) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
     }
   }
 
@@ -523,16 +523,16 @@ export class AccountingController {
     try {
       const auth = await getAuth(req);
       if (!auth?.companyId) {
-        return NextResponse.json({ error: 'غير مصرح' }, { status: 401 });
+        return NextResponse.json({ success: false, error: 'غير مصرح' }, { status: 401 });
       }
 
       const { searchParams } = new URL(req.url);
       const asOfDate = searchParams.get('asOfDate') ? new Date(searchParams.get('asOfDate')!) : new Date();
 
       const balanceSheet = await accountingService.getBalanceSheet(auth.companyId, asOfDate);
-      return NextResponse.json(balanceSheet);
+      return NextResponse.json({ success: true, data: balanceSheet });
     } catch (error: any) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
     }
   }
 
@@ -542,13 +542,13 @@ export class AccountingController {
     try {
       const auth = await getAuth(req);
       if (!auth?.companyId) {
-        return NextResponse.json({ error: 'غير مصرح' }, { status: 401 });
+        return NextResponse.json({ success: false, error: 'غير مصرح' }, { status: 401 });
       }
 
       const accounts = await accountingService.seedDefaultAccounts(auth.companyId);
-      return NextResponse.json({ message: 'تم إنشاء الحسابات الافتراضية', count: accounts.length });
+      return NextResponse.json({ success: true, message: 'تم إنشاء الحسابات الافتراضية', count: accounts.length, data: accounts });
     } catch (error: any) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
     }
   }
 }

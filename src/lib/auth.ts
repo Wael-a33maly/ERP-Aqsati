@@ -255,3 +255,29 @@ export function isAgent(user: AuthUser): boolean {
 export function isCollector(user: AuthUser): boolean {
   return user.role === 'COLLECTOR';
 }
+
+/**
+ * Get auth data from request - Helper for API routes
+ * Returns user info suitable for authorization checks
+ */
+export async function getAuth(_req?: Request): Promise<{
+  userId: string;
+  email: string;
+  role: string;
+  companyId: string | null;
+  branchId: string | null;
+} | null> {
+  const user = await getCurrentUser();
+  
+  if (!user) {
+    return null;
+  }
+  
+  return {
+    userId: user.id,
+    email: user.email,
+    role: user.role,
+    companyId: user.companyId,
+    branchId: user.branchId,
+  };
+}

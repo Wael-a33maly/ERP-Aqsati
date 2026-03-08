@@ -2423,3 +2423,77 @@ Stage Summary:
 - 0 أخطاء
 - 7 تحذيرات (موجودة مسبقاً)
 
+
+---
+## Task ID: 15
+### Work Task
+إصلاح مشكلة الـ Accounting API - 404 Error عند تحميل شجرة الحسابات
+
+### Work Summary
+
+#### المشكلة:
+- خطأ HTTP 404 عند استدعاء `/api/accounts/tree`
+- السبب: دالة `getAuth()` غير موجودة في ملف auth.ts
+- السبب الثاني: Controller يُرجع البيانات مباشرة بدون تنسيق `{ success: true, data: ... }`
+
+#### الملفات المُحدثة:
+
+1. **`/src/lib/auth.ts`**:
+   - إضافة دالة `getAuth()` الجديدة:
+     ```typescript
+     export async function getAuth(_req?: Request): Promise<{
+       userId: string;
+       email: string;
+       role: string;
+       companyId: string | null;
+       branchId: string | null;
+     } | null>
+     ```
+   - تستدعي `getCurrentUser()` داخلياً
+   - تُرجع بيانات المستخدم للتحقق من الصلاحيات
+
+2. **`/src/controllers/accounting.controller.ts`**:
+   - تحديث جميع الدوال لتُرجع `{ success: true, data: ... }` بدلاً من البيانات مباشرة
+   - إضافة `{ success: false, error: ... }` للأخطاء
+   - تحديث جميع error responses لتكون متناسقة مع باقي الـ API
+
+#### الدوال المُحدثة:
+- `getAccounts`
+- `getAccountTree`
+- `getAccountById`
+- `createAccount`
+- `updateAccount`
+- `deleteAccount`
+- `getAccountBalance`
+- `getNextAccountCode`
+- `getFiscalYears`
+- `getCurrentFiscalYear`
+- `getFiscalYearById`
+- `createFiscalYear`
+- `updateFiscalYear`
+- `setCurrentFiscalYear`
+- `closeFiscalYear`
+- `getJournalEntries`
+- `getJournalEntryById`
+- `createJournalEntry`
+- `updateJournalEntry`
+- `deleteJournalEntry`
+- `approveJournalEntry`
+- `cancelJournalEntry`
+- `getVouchers`
+- `getVoucherById`
+- `createVoucher`
+- `updateVoucher`
+- `deleteVoucher`
+- `approveVoucher`
+- `cancelVoucher`
+- `getTrialBalance`
+- `getIncomeStatement`
+- `getBalanceSheet`
+- `seedDefaultAccounts`
+
+#### النتيجة:
+- ✅ إصلاح خطأ 404
+- ✅ تنسيق موحد لجميع الـ API responses
+- ✅ التوافق مع api-client.ts
+

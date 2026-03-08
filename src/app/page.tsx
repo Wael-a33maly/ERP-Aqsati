@@ -20,7 +20,8 @@ import {
   Download, FileText, Layers, TrendingUp, Bell, Check, AlertTriangle, Info, CheckCircle, LogOut, Save, Trash2,
   BellRing, XCircle, AlertCircle, Clock, Upload, Gift, PanelRightClose, PanelRightOpen, Layout, Percent as CommissionIcon,
   Users as UsersIcon, FileStack, Eye, Calendar, User, Building, LayoutTemplate, Key, Link, MessageCircle, Send, Copy,
-  TruckIcon, FileInput, ArrowLeftRight, Mail, Filter
+  TruckIcon, FileInput, ArrowLeftRight, Mail, Filter, BookOpen, TreeDeciduous, FileSpreadsheet, RotateCcw as RotateCcwIcon,
+  Pencil
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTheme } from 'next-themes'
@@ -47,6 +48,10 @@ import InventoryReportsPage from '@/components/procurement/inventory-reports-pag
 import SuperAdminDashboard from '@/components/super-admin/super-admin-dashboard'
 import ImpersonationBanner from '@/components/impersonation-banner'
 import { AccountingDashboard } from '@/components/accounting/accounting-dashboard'
+import { AccountTree } from '@/components/accounting/account-tree'
+import { JournalEntries } from '@/components/accounting/journal-entries'
+import { Vouchers } from '@/components/accounting/vouchers'
+import { FinancialReports } from '@/components/accounting/financial-reports'
 
 // ============== TYPES ==============
 type UserType = { id: string; email: string; name: string; role: string }
@@ -388,10 +393,17 @@ const navGroups = [
     { id: 'inventory-transfers', label: 'التحويلات', icon: ArrowLeftRight, color: 'text-purple-500', bgColor: 'bg-purple-500/10' },
     { id: 'inventory-reports', label: 'تقارير المخازن', icon: BarChart3, color: 'text-teal-500', bgColor: 'bg-teal-500/10' },
   ]},
+  { id: 'accounting', title: 'النظام المحاسبي', isNew: true, items: [
+    { id: 'accounting-dashboard', label: 'لوحة التحكم المحاسبية', icon: Calculator, color: 'text-blue-600', bgColor: 'bg-blue-600/10' },
+    { id: 'account-tree', label: 'شجرة الحسابات', icon: FileStack, color: 'text-green-600', bgColor: 'bg-green-600/10' },
+    { id: 'journal-entries', label: 'قيود اليومية', icon: BookOpen, color: 'text-purple-500', bgColor: 'bg-purple-500/10' },
+    { id: 'vouchers', label: 'السندات المالية', icon: Receipt, color: 'text-amber-500', bgColor: 'bg-amber-500/10' },
+    { id: 'fiscal-years', label: 'السنوات المالية', icon: Calendar, color: 'text-cyan-500', bgColor: 'bg-cyan-500/10' },
+    { id: 'financial-reports', label: 'التقارير المالية', icon: BarChart3, color: 'text-indigo-500', bgColor: 'bg-indigo-500/10' },
+  ]},
   { id: 'reports', title: 'التقارير والإعدادات', items: [
     { id: 'commissions', label: 'العمولات', icon: Percent, color: 'text-fuchsia-500', bgColor: 'bg-fuchsia-500/10' },
     { id: 'reports', label: 'التقارير', icon: BarChart3, color: 'text-violet-500', bgColor: 'bg-violet-500/10' },
-    { id: 'accounting', label: 'النظام المحاسبي', icon: Calculator, color: 'text-blue-600', bgColor: 'bg-blue-600/10' },
     { id: 'data-management', label: 'إدارة البيانات', icon: Database, color: 'text-red-500', bgColor: 'bg-red-500/10' },
     { id: 'receipt-templates', label: 'تصميم الإيصالات', icon: Layout, color: 'text-indigo-500', bgColor: 'bg-indigo-500/10' },
     { id: 'receipts-print', label: 'طباعة الإيصالات', icon: Printer, color: 'text-emerald-500', bgColor: 'bg-emerald-500/10' },
@@ -9862,6 +9874,9 @@ function Sidebar({ currentView, onNavigate, onClose, collapsed, fontSize, onTogg
                             openGroup === group.id ? 'bg-primary shadow-sm shadow-primary/50' : 'bg-muted-foreground/30'
                           }`} />
                           <span className={`${fontSizeClass} font-semibold`}>{group.title}</span>
+                          {group.isNew && (
+                            <span className="px-1.5 py-0.5 text-[10px] font-bold bg-gradient-to-l from-green-500 to-emerald-500 text-white rounded-full animate-pulse">جديد</span>
+                          )}
                         </div>
                         <div className={`transition-transform duration-200 ${openGroup === group.id ? 'rotate-180' : ''}`}>
                           <ChevronDown className={iconSizeClass} />
@@ -10821,6 +10836,267 @@ function ReceiptsPrintDashboard() {
   )
 }
 
+// ============== ACCOUNTING PAGES ==============
+// صفحة شجرة الحسابات
+function AccountTreePage() {
+  return (
+    <div className="space-y-6" dir="rtl">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold flex items-center gap-3">
+            <TreeDeciduous className="h-7 w-7 text-green-600" />
+            شجرة الحسابات المحاسبية
+          </h1>
+          <p className="text-muted-foreground mt-1">إدارة وتنظيم الدليل المحاسبي للحسابات</p>
+        </div>
+      </div>
+      <AccountTree />
+    </div>
+  )
+}
+
+// صفحة قيود اليومية
+function JournalEntriesPage() {
+  return (
+    <div className="space-y-6" dir="rtl">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold flex items-center gap-3">
+            <BookOpen className="h-7 w-7 text-purple-600" />
+            قيود اليومية
+          </h1>
+          <p className="text-muted-foreground mt-1">إدارة القيود المحاسبية اليومية</p>
+        </div>
+      </div>
+      <JournalEntries />
+    </div>
+  )
+}
+
+// صفحة السندات المالية
+function VouchersPage() {
+  return (
+    <div className="space-y-6" dir="rtl">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold flex items-center gap-3">
+            <Receipt className="h-7 w-7 text-amber-600" />
+            السندات المالية
+          </h1>
+          <p className="text-muted-foreground mt-1">سندات القبض والصرف والتحويل</p>
+        </div>
+      </div>
+      <Vouchers />
+    </div>
+  )
+}
+
+// صفحة السنوات المالية
+function FiscalYearsPage() {
+  const [fiscalYears, setFiscalYears] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [showDialog, setShowDialog] = useState(false)
+  const [editingYear, setEditingYear] = useState<any>(null)
+  const [saving, setSaving] = useState(false)
+  const [formData, setFormData] = useState({
+    name: '',
+    startDate: '',
+    endDate: '',
+  })
+
+  useEffect(() => {
+    loadFiscalYears()
+  }, [])
+
+  const loadFiscalYears = async () => {
+    setLoading(true)
+    try {
+      const response = await fetch('/api/fiscal-years')
+      const result = await response.json()
+      if (result.success) {
+        setFiscalYears(result.data || [])
+      }
+    } catch (error) {
+      console.error('Error loading fiscal years:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleSave = async () => {
+    setSaving(true)
+    try {
+      if (editingYear) {
+        await fetch(`/api/fiscal-years/${editingYear.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData)
+        })
+      } else {
+        await fetch('/api/fiscal-years', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData)
+        })
+      }
+      setShowDialog(false)
+      loadFiscalYears()
+      toast.success('تم الحفظ بنجاح')
+    } catch (error: any) {
+      toast.error(error.message || 'حدث خطأ أثناء الحفظ')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleSetCurrent = async (id: string) => {
+    try {
+      await fetch(`/api/fiscal-years/${id}/set-current`, { method: 'PUT' })
+      loadFiscalYears()
+      toast.success('تم تعيين السنة المالية الحالية')
+    } catch (error) {
+      toast.error('حدث خطأ')
+    }
+  }
+
+  const statusColors: any = {
+    active: 'bg-green-500/10 text-green-600',
+    closed: 'bg-gray-500/10 text-gray-600',
+    pending: 'bg-yellow-500/10 text-yellow-600'
+  }
+  const statusLabels: any = {
+    active: 'نشطة',
+    closed: 'مغلقة',
+    pending: 'معلقة'
+  }
+
+  return (
+    <div className="space-y-6" dir="rtl">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold flex items-center gap-3">
+            <Calendar className="h-7 w-7 text-cyan-600" />
+            السنوات المالية
+          </h1>
+          <p className="text-muted-foreground mt-1">إدارة السنوات والفترات المالية</p>
+        </div>
+        <Button onClick={() => { setEditingYear(null); setFormData({ name: '', startDate: '', endDate: '' }); setShowDialog(true) }}>
+          <Plus className="h-4 w-4 ml-2" />
+          سنة مالية جديدة
+        </Button>
+      </div>
+
+      <Card>
+        <CardContent className="p-0">
+          {loading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : fiscalYears.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <Calendar className="h-12 w-12 mx-auto mb-4 opacity-30" />
+              <p>لا توجد سنوات مالية</p>
+              <Button variant="outline" className="mt-4" onClick={() => setShowDialog(true)}>
+                إضافة سنة مالية
+              </Button>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>اسم السنة</TableHead>
+                  <TableHead>تاريخ البداية</TableHead>
+                  <TableHead>تاريخ النهاية</TableHead>
+                  <TableHead>الحالة</TableHead>
+                  <TableHead>الحالية</TableHead>
+                  <TableHead>الإجراءات</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {fiscalYears.map((year) => (
+                  <TableRow key={year.id}>
+                    <TableCell className="font-medium">{year.name}</TableCell>
+                    <TableCell>{new Date(year.startDate).toLocaleDateString('ar-EG')}</TableCell>
+                    <TableCell>{new Date(year.endDate).toLocaleDateString('ar-EG')}</TableCell>
+                    <TableCell>
+                      <Badge className={statusColors[year.status] || statusColors.pending}>
+                        {statusLabels[year.status] || year.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {year.isCurrent ? (
+                        <Badge className="bg-primary text-primary-foreground">الحالية</Badge>
+                      ) : (
+                        <Button variant="ghost" size="sm" onClick={() => handleSetCurrent(year.id)}>
+                          تعيين
+                        </Button>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Button variant="ghost" size="sm" onClick={() => { setEditingYear(year); setFormData({ name: year.name, startDate: year.startDate.split('T')[0], endDate: year.endDate.split('T')[0] }); setShowDialog(true) }}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog open={showDialog} onOpenChange={setShowDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingYear ? 'تعديل السنة المالية' : 'سنة مالية جديدة'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>اسم السنة المالية</Label>
+              <Input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="مثال: 2025" />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>تاريخ البداية</Label>
+                <Input type="date" value={formData.startDate} onChange={(e) => setFormData({ ...formData, startDate: e.target.value })} />
+              </div>
+              <div className="space-y-2">
+                <Label>تاريخ النهاية</Label>
+                <Input type="date" value={formData.endDate} onChange={(e) => setFormData({ ...formData, endDate: e.target.value })} />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDialog(false)}>إلغاء</Button>
+            <Button onClick={handleSave} disabled={saving}>
+              {saving && <Loader2 className="h-4 w-4 animate-spin ml-2" />}
+              حفظ
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  )
+}
+
+// صفحة التقارير المالية
+function FinancialReportsPage() {
+  return (
+    <div className="space-y-6" dir="rtl">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold flex items-center gap-3">
+            <BarChart3 className="h-7 w-7 text-indigo-600" />
+            التقارير المالية
+          </h1>
+          <p className="text-muted-foreground mt-1">ميزان المراجعة وقائمة الدخل والميزانية العمومية</p>
+        </div>
+      </div>
+      <FinancialReports />
+    </div>
+  )
+}
+
 // ============== MAIN APP ==============
 function MainApp({ user, logout }: { user: UserType; logout: () => void }) {
   const [currentView, setCurrentView] = useState('dashboard')
@@ -10887,6 +11163,12 @@ function MainApp({ user, logout }: { user: UserType; logout: () => void }) {
       case 'payments': return <PaymentsManagement />
       case 'reports': return <ReportsPage />
       case 'accounting': return <AccountingDashboard />
+      case 'accounting-dashboard': return <AccountingDashboard />
+      case 'account-tree': return <AccountTreePage />
+      case 'journal-entries': return <JournalEntriesPage />
+      case 'vouchers': return <VouchersPage />
+      case 'fiscal-years': return <FiscalYearsPage />
+      case 'financial-reports': return <FinancialReportsPage />
       case 'data-management': return <DataManagement />
       case 'settings': return <SettingsPage />
       case 'subscription-plans': return <SubscriptionPlansPage />
