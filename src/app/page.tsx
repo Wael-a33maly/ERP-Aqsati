@@ -15,7 +15,7 @@ import { Textarea } from '@/components/ui/textarea'
 import {
   Building2, Users, Package, UserCheck, Plus, Search, Loader2, Menu, Moon, Sun,
   LayoutDashboard, Settings, X, RefreshCw, Home, DollarSign, Receipt, Wallet,
-  CreditCard, RotateCcw, BarChart3, Printer, Percent, MapPin, Warehouse,
+  CreditCard, RotateCcw, BarChart3, Printer, Percent, MapPin, Warehouse, Calculator,
   ChevronDown, ChevronUp, ArrowUpRight, ArrowDownRight, Palette, Shield, Database, Globe, HelpCircle,
   Download, FileText, Layers, TrendingUp, Bell, Check, AlertTriangle, Info, CheckCircle, LogOut, Save, Trash2,
   BellRing, XCircle, AlertCircle, Clock, Upload, Gift, PanelRightClose, PanelRightOpen, Layout, Percent as CommissionIcon,
@@ -46,6 +46,7 @@ import InventoryTransfersManagement from '@/components/procurement/inventory-tra
 import InventoryReportsPage from '@/components/procurement/inventory-reports-page'
 import SuperAdminDashboard from '@/components/super-admin/super-admin-dashboard'
 import ImpersonationBanner from '@/components/impersonation-banner'
+import { AccountingDashboard } from '@/components/accounting/accounting-dashboard'
 
 // ============== TYPES ==============
 type UserType = { id: string; email: string; name: string; role: string }
@@ -390,6 +391,7 @@ const navGroups = [
   { id: 'reports', title: 'التقارير والإعدادات', items: [
     { id: 'commissions', label: 'العمولات', icon: Percent, color: 'text-fuchsia-500', bgColor: 'bg-fuchsia-500/10' },
     { id: 'reports', label: 'التقارير', icon: BarChart3, color: 'text-violet-500', bgColor: 'bg-violet-500/10' },
+    { id: 'accounting', label: 'النظام المحاسبي', icon: Calculator, color: 'text-blue-600', bgColor: 'bg-blue-600/10' },
     { id: 'data-management', label: 'إدارة البيانات', icon: Database, color: 'text-red-500', bgColor: 'bg-red-500/10' },
     { id: 'receipt-templates', label: 'تصميم الإيصالات', icon: Layout, color: 'text-indigo-500', bgColor: 'bg-indigo-500/10' },
     { id: 'receipts-print', label: 'طباعة الإيصالات', icon: Printer, color: 'text-emerald-500', bgColor: 'bg-emerald-500/10' },
@@ -10884,6 +10886,7 @@ function MainApp({ user, logout }: { user: UserType; logout: () => void }) {
       case 'invoices': return <InvoicesManagement />
       case 'payments': return <PaymentsManagement />
       case 'reports': return <ReportsPage />
+      case 'accounting': return <AccountingDashboard />
       case 'data-management': return <DataManagement />
       case 'settings': return <SettingsPage />
       case 'subscription-plans': return <SubscriptionPlansPage />

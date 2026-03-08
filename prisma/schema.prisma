@@ -107,6 +107,9 @@ model Branch {
   User             User[]
   Warehouse        Warehouse[]
   Zone             Zone[]
+  // النظام المحاسبي
+  JournalEntry     JournalEntry[]
+  Voucher          Voucher[]
 
   @@unique([companyId, code])
 }
@@ -199,6 +202,12 @@ model Company {
   Return             Return[]
   Subscription       Subscription?
   ImpersonationTargets ImpersonationSession[] @relation("ImpersonationTargetCompany")
+  // النظام المحاسبي
+  FiscalYear         FiscalYear[]
+  AccountingPeriod   AccountingPeriod[]
+  Account            Account[]
+  JournalEntry       JournalEntry[]
+  Voucher            Voucher[]
 }
 
 model CompanyMarketplaceSettings {
@@ -1445,4 +1454,207 @@ model ImpersonationSession {
   @@index([superAdminId])
   @@index([targetCompanyId])
   @@index([isActive])
+}
+
+// =====================================================
+// النظام المحاسبي - Accounting System
+// =====================================================
+
+// السنة المالية
+model FiscalYear {
+  id          String             @id @default(cuid())
+  companyId   String
+  name        String
+  nameAr      String?
+  code        String
+  startDate   DateTime
+  endDate     DateTime
+  status      String             @default("open") // open, closed, locked
+  isCurrent   Boolean            @default(false)
+  closedBy    String?
+  closedAt    DateTime?
+  notes       String?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  Company     Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  Periods     AccountingPeriod[]
+  JournalEntries JournalEntry[]
+
+  @@unique([companyId, code])
+  @@index([companyId])
+  @@index([status])
+  @@index([startDate, endDate])
+}
+
+// الفترات المحاسبية
+model AccountingPeriod {
+  id             String       @id @default(cuid())
+  fiscalYearId   String
+  companyId      String
+  name           String
+  nameAr         String?
+  code           String
+  startDate      DateTime
+  endDate        DateTime
+  periodNumber   Int          // 1-12 for months
+  status         String       @default("open") // open, closed, locked
+  closedBy       String?
+  closedAt       DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  FiscalYear     FiscalYear   @relation(fields: [fiscalYearId], references: [id], onDelete: Cascade)
+  Company        Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  JournalEntries JournalEntry[]
+
+  @@unique([companyId, code])
+  @@index([fiscalYearId])
+  @@index([companyId])
+  @@index([startDate, endDate])
+}
+
+// شجرة الحسابات المحاسبية
+model Account {
+  id              String      @id @default(cuid())
+  companyId       String
+  parentId        String?
+  accountType     String      // ASSET, LIABILITY, EQUITY, REVENUE, EXPENSE
+  code            String      // ترميز الحساب
+  name            String
+  nameAr          String?
+  description     String?
+  level           Int         @default(1)
+  isLeaf          Boolean     @default(true) // حساب فرعي (يقبل قيود)
+  isSystem        Boolean     @default(false) // حساب نظام
+  balanceType     String      @default("DEBIT") // DEBIT, CREDIT
+  openingBalance  Float       @default(0)
+  currentBalance  Float       @default(0)
+  active          Boolean     @default(true)
+  sortOrder       Int         @default(0)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  Company         Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  Parent          Account?    @relation("AccountHierarchy", fields: [parentId], references: [id])
+  Children        Account[]   @relation("AccountHierarchy")
+  JournalLines    JournalEntryLine[]
+  VoucherLines    VoucherLine[]
+
+  @@unique([companyId, code])
+  @@index([companyId])
+  @@index([accountType])
+  @@index([parentId])
+  @@index([active])
+}
+
+// قيود اليومية
+model JournalEntry {
+  id              String             @id @default(cuid())
+  companyId       String
+  branchId        String?
+  fiscalYearId    String?
+  periodId        String?
+  entryNumber     String             // رقم القيد التلقائي
+  entryDate       DateTime           @default(now())
+  referenceType   String?            // نوع المرجع (INVOICE, PAYMENT, VOUCHER, etc.)
+  referenceId     String?            // معرف المرجع
+  description     String?
+  notes           String?
+  status          String             @default("draft") // draft, pending, approved, cancelled
+  totalDebit      Float              @default(0)
+  totalCredit     Float              @default(0)
+  isBalanced      Boolean            @default(true)
+  isAdjustment    Boolean            @default(false) // قيد تسوية
+  approvedBy      String?
+  approvedAt      DateTime?
+  cancelledBy     String?
+  cancelledAt     DateTime?
+  cancelReason    String?
+  createdBy       String?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  Company         Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  Branch          Branch?            @relation(fields: [branchId], references: [id])
+  FiscalYear      FiscalYear?        @relation(fields: [fiscalYearId], references: [id])
+  Period          AccountingPeriod?  @relation(fields: [periodId], references: [id])
+  Lines           JournalEntryLine[]
+
+  @@index([companyId])
+  @@index([branchId])
+  @@index([entryDate])
+  @@index([status])
+  @@index([referenceType, referenceId])
+}
+
+// سطور قيد اليومية
+model JournalEntryLine {
+  id              String       @id @default(cuid())
+  entryId         String
+  accountId       String
+  description     String?
+  debit           Float        @default(0)
+  credit          Float        @default(0)
+  sortOrder       Int          @default(0)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  JournalEntry    JournalEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  Account         Account      @relation(fields: [accountId], references: [id])
+
+  @@index([entryId])
+  @@index([accountId])
+}
+
+// السندات المالية (قبض/صرف/تحويل)
+model Voucher {
+  id              String        @id @default(cuid())
+  companyId       String
+  branchId        String?
+  voucherType     String        // RECEIPT (قبض), PAYMENT (صرف), TRANSFER (تحويل)
+  voucherNumber   String        // رقم السند التلقائي
+  voucherDate     DateTime      @default(now())
+  amount          Float         @default(0)
+  paymentMethod   String        // CASH, CHECK, TRANSFER, CARD
+  checkNumber     String?
+  checkDate       DateTime?
+  bankName        String?
+  accountNumber   String?
+  referenceType   String?       // INVOICE, CUSTOMER, SUPPLIER, etc.
+  referenceId     String?
+  description     String?
+  notes           String?
+  status          String        @default("draft") // draft, approved, cancelled
+  approvedBy      String?
+  approvedAt      DateTime?
+  cancelledBy     String?
+  cancelledAt     DateTime?
+  cancelReason    String?
+  createdBy       String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  Company         Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  Branch          Branch?       @relation(fields: [branchId], references: [id])
+  Lines           VoucherLine[]
+
+  @@index([companyId])
+  @@index([branchId])
+  @@index([voucherType])
+  @@index([voucherDate])
+  @@index([status])
+  @@index([referenceType, referenceId])
+}
+
+// سطور السندات
+model VoucherLine {
+  id              String    @id @default(cuid())
+  voucherId       String
+  accountId       String
+  description     String?
+  amount          Float     @default(0)
+  lineType        String    // DEBIT, CREDIT
+  sortOrder       Int       @default(0)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  Voucher         Voucher   @relation(fields: [voucherId], references: [id], onDelete: Cascade)
+  Account         Account   @relation(fields: [accountId], references: [id])
+
+  @@index([voucherId])
+  @@index([accountId])
 }
