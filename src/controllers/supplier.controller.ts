@@ -145,4 +145,41 @@ export const supplierController = {
       )
     }
   },
+
+  /**
+   * GET - جلب كشف حساب مورد
+   */
+  async getSupplierStatement(request: NextRequest) {
+    try {
+      const { searchParams } = new URL(request.url)
+      const supplierId = searchParams.get('supplierId')
+
+      if (!supplierId) {
+        return NextResponse.json(
+          { success: false, error: 'يجب تحديد المورد' },
+          { status: 400 }
+        )
+      }
+
+      const params = {
+        companyId: searchParams.get('companyId') || undefined,
+        fromDate: searchParams.get('fromDate') || undefined,
+        toDate: searchParams.get('toDate') || undefined,
+      }
+
+      const result = await supplierService.getSupplierStatement(supplierId, params)
+
+      if (!result.success) {
+        return NextResponse.json(result, { status: 404 })
+      }
+
+      return NextResponse.json(result)
+    } catch (error) {
+      console.error('Error generating supplier statement:', error)
+      return NextResponse.json(
+        { success: false, error: 'فشل في إنشاء كشف حساب المورد' },
+        { status: 500 }
+      )
+    }
+  },
 }

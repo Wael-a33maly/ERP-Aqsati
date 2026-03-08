@@ -3,6 +3,7 @@
  * خدمات الموردين
  */
 
+import { db } from '@/lib/db'
 import { supplierRepository } from '@/repositories/supplier.repository'
 import {
   SupplierQueryParams,
@@ -189,5 +190,182 @@ export const supplierService = {
       success: true,
       message: 'تم حذف المورد بنجاح',
     }
+  },
+
+  /**
+   * جلب كشف حساب مورد
+   */
+  async getSupplierStatement(supplierId: string, params: {
+    companyId?: string
+    fromDate?: string
+    toDate?: string
+  }) {
+    // جلب بيانات المورد
+    const supplier = await db.supplier.findUnique({
+      where: { id: supplierId },
+      include: {
+        Company: { select: { id: true, name: true, currency: true } },
+      },
+    })
+
+    if (!supplier) {
+      return { success: false, error: 'المورد غير موجود' }
+    }
+
+    // بناء شروط البحث
+    const dateFilter: Record<string, Date> = {}
+    if (params.fromDate) dateFilter.gte = new Date(params.fromDate)
+    if (params.toDate) dateFilter.lte = new Date(params.toDate)
+
+    const transactionWhere: any = {
+      supplierId,
+      companyId: params.companyId || supplier.companyId,
+    }
+
+    if (params.fromDate || params.toDate) {
+      transactionWhere.transactionDate = dateFilter
+    }
+
+    // جلب الحركات
+    const transactions = await db.supplierTransaction.findMany({
+      where: transactionWhere,
+      orderBy: { transactionDate: 'asc' },
+    })
+
+    // حساب الإجماليات
+    const totalDebit = transactions.reduce((sum, t) => sum + t.debit, 0)
+    const totalCredit = transactions.reduce((sum, t) => sum + t.credit, 0)
+    const currentBalance = supplier.currentBalance
+
+    // تقرير أعمار الديون
+    const today = new Date()
+    const agingBuckets = {
+      current: 0,
+      days30: 0,
+      days60: 0,
+      days90: 0,
+      total: 0,
+    }
+
+    // جلب الفواتير غير المدفوعة بالكامل
+    const unpaidInvoices = await db.purchaseInvoice.findMany({
+      where: {
+        supplierId,
+        status: { in: ['approved', 'partial'] },
+        remainingAmount: { gt: 0 },
+      },
+      orderBy: { invoiceDate: 'asc' },
+    })
+
+    for (const invoice of unpaidInvoices) {
+      const daysDiff = Math.floor(
+        (today.getTime() - new Date(invoice.invoiceDate).getTime()) / (1000 * 60 * 60 * 24)
+      )
+
+      if (daysDiff <= 30) {
+        agingBuckets.current += invoice.remainingAmount
+      } else if (daysDiff <= 60) {
+        agingBuckets.days30 += invoice.remainingAmount
+      } else if (daysDiff <= 90) {
+        agingBuckets.days60 += invoice.remainingAmount
+      } else {
+        agingBuckets.days90 += invoice.remainingAmount
+      }
+      agingBuckets.total += invoice.remainingAmount
+    }
+
+    // ملخص الفواتير
+    const invoicesSummary = await db.purchaseInvoice.aggregate({
+      where: {
+        supplierId,
+        status: 'approved',
+        ...(params.fromDate || params.toDate ? { invoiceDate: dateFilter } : {}),
+      },
+      _count: true,
+      _sum: { total: true, paidAmount: true, remainingAmount: true },
+    })
+
+    // ملخص المرتجعات
+    const returnsSummary = await db.purchaseReturn.aggregate({
+      where: {
+        supplierId,
+        status: 'approved',
+        ...(params.fromDate || params.toDate ? { returnDate: dateFilter } : {}),
+      },
+      _count: true,
+      _sum: { total: true },
+    })
+
+    // ملخص الدفعات
+    const paymentsSummary = await db.supplierPayment.aggregate({
+      where: {
+        supplierId,
+        status: 'completed',
+        ...(params.fromDate || params.toDate ? { paymentDate: dateFilter } : {}),
+      },
+      _count: true,
+      _sum: { amount: true },
+    })
+
+    const report = {
+      supplier: {
+        id: supplier.id,
+        code: supplier.supplierCode,
+        name: supplier.name,
+        nameAr: supplier.nameAr,
+        phone: supplier.phone,
+        email: supplier.email,
+        creditLimit: supplier.creditLimit,
+        currentBalance: supplier.currentBalance,
+        balanceType: supplier.balanceType,
+        paymentTerms: supplier.paymentTerms,
+        currency: supplier.currency,
+      },
+      company: supplier.Company,
+      period: {
+        from: params.fromDate || null,
+        to: params.toDate || null,
+      },
+      transactions: transactions.map((t) => ({
+        id: t.id,
+        type: t.transactionType,
+        number: t.transactionNumber,
+        date: t.transactionDate,
+        debit: t.debit,
+        credit: t.credit,
+        balance: t.balance,
+        notes: t.notes,
+        referenceType: t.referenceType,
+        referenceId: t.referenceId,
+      })),
+      summary: {
+        totalDebit,
+        totalCredit,
+        currentBalance,
+        balance:
+          currentBalance > 0
+            ? supplier.balanceType === 'CREDIT'
+              ? 'دائن'
+              : 'مدين'
+            : 'متوازن',
+      },
+      invoices: {
+        count: invoicesSummary._count,
+        total: invoicesSummary._sum.total || 0,
+        paid: invoicesSummary._sum.paidAmount || 0,
+        remaining: invoicesSummary._sum.remainingAmount || 0,
+      },
+      returns: {
+        count: returnsSummary._count,
+        total: returnsSummary._sum.total || 0,
+      },
+      payments: {
+        count: paymentsSummary._count,
+        total: paymentsSummary._sum.amount || 0,
+      },
+      aging: agingBuckets,
+    }
+
+    return { success: true, data: report }
   },
 }
