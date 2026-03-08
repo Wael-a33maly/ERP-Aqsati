@@ -69,5 +69,52 @@ export const invoiceController = {
     } catch (error: any) {
       return NextResponse.json({ success: false, error: error.message }, { status: 500 })
     }
+  },
+
+  // ============ Invoice Items Methods ============
+
+  async getInvoiceItems(request: NextRequest, id: string) {
+    try {
+      const result = await invoiceService.getInvoiceItems(id)
+      return NextResponse.json({ success: true, data: result.items, summary: result.summary })
+    } catch (error: any) {
+      return NextResponse.json({ success: false, error: error.message }, { status: 500 })
+    }
+  },
+
+  async addInvoiceItem(request: NextRequest, id: string) {
+    try {
+      const body = await request.json()
+      const result = await invoiceService.addInvoiceItem(id, body)
+      return NextResponse.json({ success: true, data: result, message: 'Item added to invoice' })
+    } catch (error: any) {
+      return NextResponse.json({ success: false, error: error.message }, { status: 400 })
+    }
+  },
+
+  async updateInvoiceItem(request: NextRequest, id: string) {
+    try {
+      const body = await request.json()
+      const result = await invoiceService.updateInvoiceItem(id, body)
+      return NextResponse.json({ success: true, data: result, message: 'Item updated successfully' })
+    } catch (error: any) {
+      return NextResponse.json({ success: false, error: error.message }, { status: 400 })
+    }
+  },
+
+  async deleteInvoiceItem(request: NextRequest, id: string) {
+    try {
+      const { searchParams } = new URL(request.url)
+      const itemId = searchParams.get('itemId')
+
+      if (!itemId) {
+        return NextResponse.json({ success: false, error: 'Item ID is required' }, { status: 400 })
+      }
+
+      const result = await invoiceService.deleteInvoiceItem(id, itemId)
+      return NextResponse.json({ success: true, message: result.message })
+    } catch (error: any) {
+      return NextResponse.json({ success: false, error: error.message }, { status: 400 })
+    }
   }
 }

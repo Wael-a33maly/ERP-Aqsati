@@ -83,5 +83,25 @@ export const customerController = {
     } catch (error: any) {
       return NextResponse.json({ success: false, error: error.message }, { status: 500 })
     }
+  },
+
+  // ============ Customer Statement Methods ============
+
+  async getCustomerStatement(request: NextRequest, id: string) {
+    try {
+      const { searchParams } = new URL(request.url)
+
+      const params = {
+        dateFrom: searchParams.get('dateFrom') || undefined,
+        dateTo: searchParams.get('dateTo') || undefined,
+        types: searchParams.get('types')?.split(',') || undefined,
+      }
+
+      const result = await customerService.getCustomerStatement(id, params)
+      return NextResponse.json({ success: true, data: result })
+    } catch (error: any) {
+      console.error('Error generating customer statement:', error)
+      return NextResponse.json({ success: false, error: error.message }, { status: 500 })
+    }
   }
 }

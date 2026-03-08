@@ -99,5 +99,95 @@ export const invoiceRepository = {
 
   async delete(id: string) {
     return db.invoice.delete({ where: { id } })
+  },
+
+  // ============ Invoice Items Methods ============
+
+  async findInvoiceItems(invoiceId: string) {
+    return db.invoice.findUnique({
+      where: { id: invoiceId },
+      include: {
+        items: {
+          include: {
+            product: {
+              select: {
+                id: true,
+                sku: true,
+                name: true,
+                nameAr: true,
+                unit: true,
+                costPrice: true,
+                sellPrice: true,
+              },
+            },
+          },
+          orderBy: { createdAt: 'asc' },
+        },
+      },
+    })
+  },
+
+  async findInvoiceItem(itemId: string) {
+    return db.invoiceItem.findUnique({
+      where: { id: itemId },
+    })
+  },
+
+  async createInvoiceItem(data: {
+    invoiceId: string
+    productId: string
+    description?: string
+    quantity: number
+    unitPrice: number
+    discount?: number
+    taxRate?: number
+    taxAmount?: number
+    total: number
+    notes?: string
+  }) {
+    return db.invoiceItem.create({
+      data,
+      include: {
+        product: {
+          select: {
+            id: true,
+            sku: true,
+            name: true,
+            nameAr: true,
+            unit: true,
+          },
+        },
+      },
+    })
+  },
+
+  async updateInvoiceItem(itemId: string, data: any) {
+    return db.invoiceItem.update({
+      where: { id: itemId },
+      data,
+      include: {
+        product: {
+          select: {
+            id: true,
+            sku: true,
+            name: true,
+            nameAr: true,
+            unit: true,
+          },
+        },
+      },
+    })
+  },
+
+  async deleteInvoiceItem(itemId: string) {
+    return db.invoiceItem.delete({
+      where: { id: itemId },
+    })
+  },
+
+  async getInvoiceItems(invoiceId: string) {
+    return db.invoiceItem.findMany({
+      where: { invoiceId },
+    })
   }
 }
