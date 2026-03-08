@@ -371,12 +371,180 @@ export const seedService = {
     }
 
     // ============== 6. التصنيفات الهرمية ==============
-    // ... (abbreviated for brevity - similar pattern continues)
-    
-    // ============== 7. المنتجات ==============
-    // ... (abbreviated for brevity)
+    // التصنيفات الرئيسية
+    const categoriesData = [
+      { name: 'إلكترونيات', nameAr: 'إلكترونيات', code: 'CAT-001' },
+      { name: 'أجهزة منزلية', nameAr: 'أجهزة منزلية', code: 'CAT-002' },
+      { name: 'أثاث', nameAr: 'أثاث', code: 'CAT-003' },
+      { name: 'ملابس', nameAr: 'ملابس', code: 'CAT-004' },
+    ]
 
-    // ============== 8. المخازن ==============
+    const categories: any[] = []
+    for (const catData of categoriesData) {
+      let existing = await seedRepository.findCategoryByCode(catData.code)
+      if (!existing) {
+        existing = await seedRepository.createCategory({
+          name: catData.name,
+          nameAr: catData.nameAr,
+          code: catData.code,
+          companyId: company1.id,
+          active: true,
+        })
+        counts.categories++
+      }
+      categories.push(existing)
+    }
+
+    // ============== 7. المنتجات ==============
+    const productsData = [
+      { sku: 'PRD-001', name: 'هاتف ذكي', nameAr: 'هاتف ذكي', costPrice: 1500, sellPrice: 2000, categoryId: categories[0]?.id },
+      { sku: 'PRD-002', name: 'لابتوب', nameAr: 'لابتوب', costPrice: 3000, sellPrice: 4000, categoryId: categories[0]?.id },
+      { sku: 'PRD-003', name: 'تلفزيون 55 بوصة', nameAr: 'تلفزيون 55 بوصة', costPrice: 2500, sellPrice: 3200, categoryId: categories[1]?.id },
+      { sku: 'PRD-004', name: 'غسالة أوتوماتيك', nameAr: 'غسالة أوتوماتيك', costPrice: 2000, sellPrice: 2800, categoryId: categories[1]?.id },
+      { sku: 'PRD-005', name: 'ثلاجة', nameAr: 'ثلاجة', costPrice: 2200, sellPrice: 3000, categoryId: categories[1]?.id },
+      { sku: 'PRD-006', name: 'كنبة ثلاثية', nameAr: 'كنبة ثلاثية', costPrice: 1500, sellPrice: 2200, categoryId: categories[2]?.id },
+      { sku: 'PRD-007', name: 'سرير خشب', nameAr: 'سرير خشب', costPrice: 1200, sellPrice: 1800, categoryId: categories[2]?.id },
+      { sku: 'PRD-008', name: 'طاولة سفرة', nameAr: 'طاولة سفرة', costPrice: 800, sellPrice: 1200, categoryId: categories[2]?.id },
+      { sku: 'PRD-009', name: 'بدلة رجالي', nameAr: 'بدلة رجالي', costPrice: 400, sellPrice: 700, categoryId: categories[3]?.id },
+      { sku: 'PRD-010', name: 'فستان نسائي', nameAr: 'فستان نسائي', costPrice: 300, sellPrice: 550, categoryId: categories[3]?.id },
+    ]
+
+    const products: any[] = []
+    for (const prodData of productsData) {
+      let existing = await seedRepository.findProductBySku(prodData.sku)
+      if (!existing && prodData.categoryId) {
+        existing = await seedRepository.createProduct({
+          sku: prodData.sku,
+          name: prodData.name,
+          nameAr: prodData.nameAr,
+          costPrice: prodData.costPrice,
+          sellPrice: prodData.sellPrice,
+          categoryId: prodData.categoryId,
+          companyId: company1.id,
+          unit: 'PIECE',
+          active: true,
+        })
+        counts.products++
+      }
+      products.push(existing)
+    }
+
+    // ============== 8. العملاء ==============
+    const customersData = [
+      { name: 'محمد أحمد', phone: '0501234567', zoneId: zones[0]?.id, governorateId: createdGovs['GOV-001']?.id },
+      { name: 'علي حسن', phone: '0502345678', zoneId: zones[1]?.id, governorateId: createdGovs['GOV-001']?.id },
+      { name: 'خالد سعيد', phone: '0503456789', zoneId: zones[2]?.id, governorateId: createdGovs['GOV-002']?.id },
+      { name: 'فهد محمد', phone: '0504567890', zoneId: zones[3]?.id, governorateId: createdGovs['GOV-001']?.id },
+      { name: 'عبدالله ناصر', phone: '0505678901', zoneId: zones[4]?.id, governorateId: createdGovs['GOV-001']?.id },
+      { name: 'سعود عمر', phone: '0506789012', zoneId: zones[5]?.id, governorateId: createdGovs['GOV-002']?.id },
+      { name: 'أحمد علي', phone: '0507890123', zoneId: zones[6]?.id, governorateId: createdGovs['GOV-002']?.id },
+      { name: 'ماجد خالد', phone: '0508901234', zoneId: zones[0]?.id, governorateId: createdGovs['GOV-001']?.id },
+      { name: 'راشد سلطان', phone: '0509012345', zoneId: zones[1]?.id, governorateId: createdGovs['GOV-001']?.id },
+      { name: 'ناصر حمود', phone: '0510123456', zoneId: zones[2]?.id, governorateId: createdGovs['GOV-002']?.id },
+    ]
+
+    const customers: any[] = []
+    for (const custData of customersData) {
+      const year = new Date().getFullYear()
+      const random = Math.floor(Math.random() * 100000).toString().padStart(5, '0')
+      const customerCode = `CUS-${year}-${random}`
+
+      let existing = await seedRepository.findCustomerByCode(customerCode)
+      if (!existing && custData.zoneId && custData.governorateId) {
+        existing = await seedRepository.createCustomer({
+          name: custData.name,
+          nameAr: custData.name,
+          code: customerCode,
+          phone: custData.phone,
+          zoneId: custData.zoneId,
+          governorateId: custData.governorateId,
+          companyId: company1.id,
+          branchId: branch1.id,
+          agentId: agent1.id,
+          creditLimit: 10000,
+          active: true,
+        })
+        counts.customers++
+      }
+      if (existing) customers.push(existing)
+    }
+
+    // ============== 9. الفواتير ==============
+    const invoicesData = [
+      { customerIndex: 0, totalAmount: 5000, type: 'CASH' },
+      { customerIndex: 1, totalAmount: 7500, type: 'INSTALLMENT' },
+      { customerIndex: 2, totalAmount: 3000, type: 'CASH' },
+      { customerIndex: 3, totalAmount: 10000, type: 'INSTALLMENT' },
+      { customerIndex: 4, totalAmount: 4500, type: 'CASH' },
+    ]
+
+    const invoices: any[] = []
+    for (let i = 0; i < invoicesData.length; i++) {
+      const invData = invoicesData[i]
+      const customer = customers[invData.customerIndex]
+      if (!customer) continue
+
+      const invoiceNumber = `INV-${new Date().getFullYear()}-${String(i + 1).padStart(6, '0')}`
+      let existing = await seedRepository.findInvoiceByNumber(invoiceNumber)
+      if (!existing) {
+        existing = await seedRepository.createInvoice({
+          invoiceNumber,
+          customerId: customer.id,
+          companyId: company1.id,
+          branchId: branch1.id,
+          agentId: agent1.id,
+          total: invData.totalAmount,
+          paidAmount: invData.type === 'CASH' ? invData.totalAmount : 0,
+          remainingAmount: invData.type === 'CASH' ? 0 : invData.totalAmount,
+          subtotal: invData.totalAmount,
+          status: invData.type === 'CASH' ? 'PAID' : 'PENDING',
+          type: invData.type,
+          invoiceDate: new Date(),
+          dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        })
+        counts.invoices++
+      }
+      invoices.push(existing)
+    }
+
+    // ============== 10. المدفوعات ==============
+    for (const invoice of invoices) {
+      if (invoice && invoice.status === 'PAID') {
+        const paymentNumber = `PAY-${new Date().getFullYear()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`
+        await seedRepository.createPayment({
+          paymentNumber,
+          invoiceId: invoice.id,
+          customerId: invoice.customerId,
+          companyId: company1.id,
+          branchId: branch1.id,
+          amount: invoice.total,
+          method: 'CASH',
+          status: 'completed',
+          paymentDate: new Date(),
+          agentId: agent1.id,
+        })
+        counts.payments++
+      }
+    }
+
+    // ============== 11. سياسات العمولات ==============
+    const commissionPolicy = await seedRepository.findCommissionPolicyByName('سياسة العمولات الافتراضية', company1.id)
+    if (!commissionPolicy) {
+      await seedRepository.createCommissionPolicy({
+        name: 'سياسة العمولات الافتراضية',
+        nameAr: 'سياسة العمولات الافتراضية',
+        companyId: company1.id,
+        type: 'BOTH',
+        calculationType: 'PERCENTAGE',
+        value: 2.5,
+        minAmount: 50,
+        maxAmount: 5000,
+        active: true,
+      })
+      counts.commissionPolicies++
+    }
+
+    // ============== 12. المخازن ==============
     let warehouse1 = await seedRepository.findWarehouseByCode('WH-0001')
     if (!warehouse1) {
       warehouse1 = await seedRepository.createWarehouse({

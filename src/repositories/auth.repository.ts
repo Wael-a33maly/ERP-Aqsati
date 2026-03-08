@@ -15,14 +15,7 @@ export const authRepository = {
       where: { email: email.toLowerCase() },
       include: {
         Company: { select: { id: true, name: true, code: true } },
-        Branch: { select: { id: true, name: true, code: true } },
-        Role: {
-          include: {
-            RolePermission: {
-              include: { permission: true }
-            }
-          }
-        }
+        Branch: { select: { id: true, name: true, code: true } }
       }
     })
   },
@@ -35,14 +28,7 @@ export const authRepository = {
       where: { id },
       include: {
         Company: { select: { id: true, name: true, code: true } },
-        Branch: { select: { id: true, name: true, code: true } },
-        Role: {
-          include: {
-            RolePermission: {
-              include: { permission: true }
-            }
-          }
-        }
+        Branch: { select: { id: true, name: true, code: true } }
       }
     })
   },
@@ -130,8 +116,8 @@ export const authRepository = {
     return db.user.findUnique({
       where: { email },
       include: {
-        company: { select: { id: true, name: true } },
-        branch: { select: { id: true, name: true } },
+        Company: { select: { id: true, name: true } },
+        Branch: { select: { id: true, name: true } },
       }
     })
   },

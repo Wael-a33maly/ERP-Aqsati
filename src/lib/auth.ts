@@ -106,10 +106,10 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
   const user = await db.user.findUnique({
     where: { id: payload.userId },
     include: {
-      company: {
+      Company: {
         select: { id: true, name: true, code: true },
       },
-      branch: {
+      Branch: {
         select: { id: true, name: true, code: true },
       },
     },
@@ -129,8 +129,8 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
     branchId: user.branchId,
     active: user.active,
     avatar: user.avatar,
-    company: user.company,
-    branch: user.branch,
+    company: user.Company,
+    branch: user.Branch,
   };
 }
 
@@ -154,10 +154,10 @@ export async function authenticateUser(email: string, password: string): Promise
   const user = await db.user.findUnique({
     where: { email: email.toLowerCase() },
     include: {
-      company: {
+      Company: {
         select: { id: true, name: true, code: true },
       },
-      branch: {
+      Branch: {
         select: { id: true, name: true, code: true },
       },
     },
@@ -194,8 +194,8 @@ export async function authenticateUser(email: string, password: string): Promise
       branchId: user.branchId,
       active: user.active,
       avatar: user.avatar,
-      company: user.company,
-      branch: user.branch,
+      company: user.Company,
+      branch: user.Branch,
     },
     token,
   };

@@ -10,6 +10,13 @@ import { cookies } from 'next/headers'
 
 // التحقق من صلاحيات السوبر أدمن
 async function checkSuperAdmin() {
+  // أولاً: التحقق من getCurrentUser (من auth-token cookie)
+  const user = await getCurrentUser()
+  if (user && user.role === 'SUPER_ADMIN') {
+    return user
+  }
+
+  // ثانياً: التحقق من erp_user cookie (للتوافقية)
   const cookieStore = await cookies()
   const userCookie = cookieStore.get('erp_user')
 
@@ -17,12 +24,16 @@ async function checkSuperAdmin() {
     return null
   }
 
-  const user = JSON.parse(userCookie.value)
-  if (user.role !== 'SUPER_ADMIN') {
+  try {
+    const cookieUser = JSON.parse(userCookie.value)
+    if (cookieUser.role === 'SUPER_ADMIN') {
+      return cookieUser
+    }
+  } catch {
     return null
   }
 
-  return user
+  return null
 }
 
 export const adminController = {

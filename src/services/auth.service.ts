@@ -199,6 +199,18 @@ export const authService = {
 
     console.log('[Debug Auth] Success! User:', user.email)
 
+    // إنشاء رمز JWT
+    const token = generateToken({
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+      companyId: user.companyId,
+      branchId: user.branchId
+    })
+
+    // تعيين الكوكي
+    await setAuthCookie(token)
+
     return {
       user: {
         id: user.id,
@@ -207,10 +219,10 @@ export const authService = {
         role: user.role,
         companyId: user.companyId,
         branchId: user.branchId,
-        company: user.company,
-        branch: user.branch
+        company: user.Company,
+        branch: user.Branch
       },
-      token: 'debug-token-' + Date.now()
+      token
     }
   },
 

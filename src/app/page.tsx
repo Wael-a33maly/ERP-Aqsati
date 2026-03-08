@@ -10999,43 +10999,34 @@ function LoginPage({ onLogin, onRegister }: any) {
   const [error, setError] = useState<string | null>(null)
   const [form, setForm] = useState({ email: 'a33maly@gmail.com', password: 'WEGSMs@1983' })
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
-
-    // تسجيل دخول فوري للسوبر أدمن - بدون أي طلب شبكة
-    if (form.email === 'a33maly@gmail.com' && form.password === 'WEGSMs@1983') {
-      const user = {
-        id: 'super-admin-1',
-        email: 'a33maly@gmail.com',
-        name: 'مدير النظام',
-        role: 'SUPER_ADMIN'
-      }
-      localStorage.setItem('erp_user', JSON.stringify(user))
-      onLogin(user)
-      toast.success('مرحباً بك!')
-      return
-    }
-
-    // للمستخدمين الآخرين - محاولة API
     setLoading(true)
-    fetch('/api/debug-auth', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: form.email, password: form.password })
-    })
-    .then(res => res.json())
-    .then(data => {
+
+    try {
+      // استدعاء API لتسجيل الدخول (للجميع بما فيهم السوبر أدمن)
+      const res = await fetch('/api/debug-auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: form.email, password: form.password })
+      })
+      
+      const data = await res.json()
+      
       if (data.success && data.data) {
         const user = data.data.user || data.data
+        localStorage.setItem('erp_user', JSON.stringify(user))
         onLogin(user)
         toast.success('مرحباً بك!')
       } else {
         setError(data.error || 'فشل تسجيل الدخول')
       }
-    })
-    .catch(() => setError('حدث خطأ في الاتصال'))
-    .finally(() => setLoading(false))
+    } catch (err) {
+      setError('حدث خطأ في الاتصال')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
