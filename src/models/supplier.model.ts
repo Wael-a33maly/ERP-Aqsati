@@ -1,102 +1,82 @@
-// ============================================
-// Supplier Model - نموذج الموردين
-// ============================================
+/**
+ * Supplier Model
+ * نموذج الموردين
+ */
 
-export interface Supplier {
-  id: string
-  companyId: string
-  name: string
-  nameAr: string | null
-  code: string
-  phone: string | null
-  phone2: string | null
-  email: string | null
-  address: string | null
-  taxNumber: string | null
-  balance: number
-  creditLimit: number
-  paymentTerms: number
-  notes: string | null
-  active: boolean
-  createdAt: Date
-  updatedAt: Date
-}
+import { Supplier, SupplierTransaction } from '@prisma/client'
 
-// Query Parameters
-export interface SupplierQueryParams {
-  page?: number
-  limit?: number
-  search?: string
-  companyId?: string
-  active?: boolean
-}
+// ============ Types ============
 
-// Input Types
+export type BalanceType = 'CREDIT' | 'DEBIT'
+export type TransactionType = 'OPENING' | 'INVOICE' | 'RETURN' | 'PAYMENT' | 'ADJUSTMENT'
+
+// ============ Input Types ============
+
 export interface CreateSupplierInput {
   companyId: string
   name: string
-  code: string
   nameAr?: string
   phone?: string
   phone2?: string
   email?: string
   address?: string
+  city?: string
   taxNumber?: string
+  commercialReg?: string
   creditLimit?: number
+  openingBalance?: number
+  balanceType?: BalanceType
   paymentTerms?: number
+  currency?: string
   notes?: string
+  active?: boolean
+  hasOpeningBalance?: boolean
 }
 
 export interface UpdateSupplierInput {
   id: string
   name?: string
   nameAr?: string
-  code?: string
   phone?: string
   phone2?: string
   email?: string
   address?: string
+  city?: string
   taxNumber?: string
+  commercialReg?: string
   creditLimit?: number
   paymentTerms?: number
+  currency?: string
   notes?: string
   active?: boolean
 }
 
-// Response Types
-export interface SupplierWithDetails extends Supplier {
-  Company?: {
-    id: string
-    name: string
-  }
-  _count?: {
-    purchaseInvoices: number
+// ============ Query Params ============
+
+export interface SupplierQueryParams {
+  page?: number
+  limit?: number
+  search?: string
+  companyId: string
+  active?: boolean
+}
+
+// ============ Response Types ============
+
+export interface SupplierWithStats extends Supplier {
+  _count: {
+    PurchaseInvoice: number
+    PurchaseReturn: number
+    SupplierPayment: number
   }
 }
 
-export interface SupplierListResponse {
-  data: SupplierWithDetails[]
-  pagination: {
-    page: number
-    limit: number
-    total: number
-    totalPages: number
-  }
+export interface SupplierWithTransactions extends Supplier {
+  transactions: SupplierTransaction[]
+  totalDebit: number
+  totalCredit: number
+  currentBalance: number
 }
 
-// Supplier Statement
-export interface SupplierStatementParams {
-  supplierId: string
-  startDate?: Date
-  endDate?: Date
-}
-
-export interface SupplierStatementLine {
-  date: Date
-  referenceType: string
-  referenceNumber: string
-  debit: number
-  credit: number
-  balance: number
-  notes?: string
-}
+// ============ Export Types ============
+export type { Supplier, SupplierTransaction }

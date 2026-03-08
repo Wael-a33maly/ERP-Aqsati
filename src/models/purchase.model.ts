@@ -1,159 +1,139 @@
-// ============================================
-// Purchase Model - نموذج المشتريات
-// ============================================
+/**
+ * Purchase Model
+ * نموذج فواتير المشتريات والمرتجعات
+ */
 
-export interface PurchaseInvoice {
-  id: string
-  companyId: string
-  branchId: string | null
-  supplierId: string | null
-  invoiceNumber: string
-  invoiceDate: Date
-  dueDate: Date | null
-  type: PurchaseType
-  status: PurchaseStatus
-  subtotal: number
-  discount: number
-  taxRate: number
-  taxAmount: number
-  total: number
-  paidAmount: number
-  remainingAmount: number
-  notes: string | null
-  createdAt: Date
-  updatedAt: Date
-}
+import { PurchaseInvoice, PurchaseInvoiceItem, PurchaseReturn, PurchaseReturnItem } from '@prisma/client'
 
-export interface PurchaseInvoiceItem {
-  id: string
-  invoiceId: string
-  productId: string
-  description: string | null
-  quantity: number
-  unitPrice: number
-  discount: number
-  taxRate: number
-  taxAmount: number
-  total: number
-  notes: string | null
-}
+// ============ Types ============
 
-export type PurchaseType = 'cash' | 'credit'
-export type PurchaseStatus = 'pending' | 'partial' | 'paid' | 'cancelled'
+export type PurchaseInvoiceStatus = 'draft' | 'approved' | 'cancelled' | 'paid'
+export type PurchaseReturnStatus = 'draft' | 'approved' | 'cancelled'
+export type DiscountType = 'PERCENTAGE' | 'FIXED'
 
-// Purchase Return
-export interface PurchaseReturn {
-  id: string
-  companyId: string
-  branchId: string | null
-  supplierId: string | null
-  purchaseInvoiceId: string | null
-  returnNumber: string
-  returnDate: Date
-  type: ReturnReason
-  total: number
-  status: PurchaseReturnStatus
-  notes: string | null
-  createdAt: Date
-  updatedAt: Date
-}
+// ============ Input Types ============
 
-export type ReturnReason = 'defective' | 'wrong_item' | 'quality' | 'other'
-export type PurchaseReturnStatus = 'pending' | 'approved' | 'completed' | 'cancelled'
-
-// Query Parameters
-export interface PurchaseInvoiceQueryParams {
-  page?: number
-  limit?: number
-  search?: string
-  status?: PurchaseStatus
-  supplierId?: string
-  companyId?: string
-  branchId?: string
-  startDate?: Date
-  endDate?: Date
-}
-
-export interface PurchaseReturnQueryParams {
-  page?: number
-  limit?: number
-  search?: string
-  status?: PurchaseReturnStatus
-  supplierId?: string
-  companyId?: string
-}
-
-// Input Types
-export interface CreatePurchaseInvoiceInput {
-  companyId: string
-  branchId?: string
-  supplierId?: string
-  invoiceDate: Date
-  dueDate?: Date
-  type?: PurchaseType
-  subtotal: number
-  discount?: number
-  taxRate?: number
-  taxAmount?: number
-  total: number
-  notes?: string
-  items: CreatePurchaseInvoiceItemInput[]
-}
-
-export interface CreatePurchaseInvoiceItemInput {
+export interface PurchaseInvoiceItemInput {
   productId: string
   description?: string
   quantity: number
   unitPrice: number
   discount?: number
   taxRate?: number
-  taxAmount?: number
-  total: number
+}
+
+export interface CreatePurchaseInvoiceInput {
+  companyId: string
+  branchId?: string
+  warehouseId: string
+  supplierId: string
+  supplierInvoiceNumber?: string
+  invoiceDate?: string
+  dueDate?: string
+  status?: PurchaseInvoiceStatus
+  items: PurchaseInvoiceItemInput[]
+  taxRate?: number
+  discountType?: DiscountType
+  discountValue?: number
+  additions?: number
+  deductions?: number
+  paidAmount?: number
   notes?: string
+  createdBy?: string
+}
+
+export interface PurchaseReturnItemInput {
+  purchaseInvoiceItemId?: string
+  productId: string
+  description?: string
+  quantity: number
+  unitPrice: number
+  taxRate?: number
 }
 
 export interface CreatePurchaseReturnInput {
   companyId: string
   branchId?: string
-  supplierId?: string
+  warehouseId: string
+  supplierId: string
   purchaseInvoiceId?: string
-  returnDate: Date
-  type?: ReturnReason
-  total: number
+  returnDate?: string
+  status?: PurchaseReturnStatus
+  reason?: string
+  items: PurchaseReturnItemInput[]
   notes?: string
+  createdBy?: string
 }
 
-// Response Types
-export interface PurchaseInvoiceWithDetails extends PurchaseInvoice {
-  supplier?: {
-    id: string
-    name: string
-    phone: string
-  }
-  branch?: {
-    id: string
-    name: string
-  }
-  items?: PurchaseInvoiceItem[]
+// ============ Query Params ============
+
+export interface PurchaseInvoiceQueryParams {
+  page?: number
+  limit?: number
+  search?: string
+  companyId: string
+  status?: string
+  supplierId?: string
+  branchId?: string
+  warehouseId?: string
+  fromDate?: string
+  toDate?: string
 }
 
-export interface PurchaseReturnWithDetails extends PurchaseReturn {
-  supplier?: {
+export interface PurchaseReturnQueryParams {
+  page?: number
+  limit?: number
+  search?: string
+  companyId: string
+  status?: string
+  supplierId?: string
+}
+
+// ============ Response Types ============
+
+export interface PurchaseInvoiceWithRelations extends PurchaseInvoice {
+  Supplier: {
+    id: string
+    name: string
+    supplierCode: string | null
+  }
+  Branch: {
+    id: string
+    name: string
+  } | null
+  Warehouse: {
     id: string
     name: string
   }
-  purchaseInvoice?: {
+  _count: {
+    PurchaseInvoiceItem: number
+  }
+  PurchaseInvoiceItem?: PurchaseInvoiceItem[]
+}
+
+export interface PurchaseReturnWithRelations extends PurchaseReturn {
+  Supplier: {
+    id: string
+    name: string
+    supplierCode: string | null
+  }
+  Branch: {
+    id: string
+    name: string
+  } | null
+  Warehouse: {
+    id: string
+    name: string
+  }
+  PurchaseInvoice: {
     id: string
     invoiceNumber: string
+  } | null
+  _count: {
+    PurchaseReturnItem: number
   }
+  PurchaseReturnItem?: PurchaseReturnItem[]
 }
 
-export interface PurchaseInvoiceListResponse {
-  data: PurchaseInvoiceWithDetails[]
-  pagination: {
-    page: number
-    limit: number
-    total: number
-    totalPages: number
-  }
-}
+// ============ Export Types ============
+export type { PurchaseInvoice, PurchaseInvoiceItem, PurchaseReturn, PurchaseReturnItem }

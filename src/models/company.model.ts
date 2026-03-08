@@ -1,42 +1,16 @@
-// ============================================
-// Company Model - نموذج الشركات
-// ============================================
+/**
+ * Company Model
+ * نموذج الشركات
+ */
 
-export interface Company {
-  id: string
-  name: string
-  nameAr: string | null
-  code: string
-  logo: string | null
-  email: string | null
-  phone: string | null
-  address: string | null
-  taxNumber: string | null
-  discountEnabled: boolean
-  taxRate: number
-  currency: string
-  settings: string | null
-  subscriptionStatus: string
-  planType: string
-  trialEndsAt: Date | null
-  active: boolean
-  createdAt: Date
-  updatedAt: Date
-}
+import { Company } from '@prisma/client'
 
-// Query Parameters
-export interface CompanyQueryParams {
-  page?: number
-  limit?: number
-  search?: string
-  active?: boolean
-  subscriptionStatus?: string
-}
+// ============ Types ============
 
-// Input Types
+// ============ Input Types ============
+
 export interface CreateCompanyInput {
   name: string
-  nameAr?: string
   code: string
   email?: string
   phone?: string
@@ -59,33 +33,29 @@ export interface UpdateCompanyInput {
   discountEnabled?: boolean
   taxRate?: number
   currency?: string
-  settings?: Record<string, any>
   active?: boolean
-  subscriptionStatus?: string
-  planType?: string
 }
 
-// Response Types
-export interface CompanyWithDetails extends Company {
-  _count?: {
+// ============ Query Params ============
+
+export interface CompanyQueryParams {
+  page?: number
+  limit?: number
+  search?: string
+  active?: boolean
+  id?: string
+}
+
+// ============ Response Types ============
+
+export interface CompanyWithStats extends Company {
+  _count: {
+    Branch: number
     User: number
     Customer: number
     Product: number
-    Branch: number
   }
-  branches?: {
-    id: string
-    name: string
-    code: string
-  }[]
 }
 
-export interface CompanyListResponse {
-  data: CompanyWithDetails[]
-  pagination: {
-    page: number
-    limit: number
-    total: number
-    totalPages: number
-  }
-}
+// ============ Export Types ============
+export type { Company }
