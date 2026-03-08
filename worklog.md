@@ -2144,3 +2144,145 @@ h-screen flex flex-col overflow-hidden
 - الكروت الإحصائية قابلة للنقر للتنقل
 - الفلاتر منظمة مع عناوين
 - الدفع المجمع يعمل حسب الفلاتر المفعلة
+
+---
+## Task ID: MVC-Conversion-Complete
+### Work Task
+تحويل كامل API Routes إلى MVC Architecture
+
+### Work Summary
+
+#### Modules المُحولة:
+
+**1. Auth Module (4 routes):**
+- `/api/auth/login` → `auth.controller.ts`
+- `/api/auth/logout` → `auth.controller.ts`
+- `/api/auth/me` → `auth.controller.ts`
+- `/api/auth/register` → `auth.controller.ts`
+
+**2. Reports Module (8 routes):**
+- `/api/reports/sales`
+- `/api/reports/collection`
+- `/api/reports/inventory`
+- `/api/reports/overdue-customers`
+- `/api/reports/generate`
+- `/api/reports/templates`
+- `/api/reports/inventory/valuation`
+- `/api/reports/suppliers/statement`
+
+**3. Accounting Module (4 routes):**
+- `/api/accounting/accounts`
+- `/api/accounting/journal-entries`
+- `/api/accounting/transactions`
+- `/api/accounting/reports`
+
+**4. Installments Module (5 routes):**
+- `/api/installments`
+- `/api/installments/all`
+- `/api/installments/contracts`
+- `/api/installments/collect`
+- `/api/installments/[id]/payments`
+
+**5. Procurement Module (4 routes):**
+- `/api/purchase-invoices`
+- `/api/purchase-invoices/[id]`
+- `/api/purchase-returns`
+- `/api/purchase-returns/[id]`
+
+**6. Returns Module (3 routes):**
+- `/api/returns`
+- `/api/returns/[id]`
+- `/api/returns/[id]/items`
+
+**7. Warehouses & Commissions (4 routes):**
+- `/api/warehouses`
+- `/api/commissions`
+- `/api/commissions/policies`
+- `/api/commissions/agent`
+
+**8. Roles & Suppliers (4 routes):**
+- `/api/roles`
+- `/api/roles/[id]`
+- `/api/suppliers`
+- `/api/suppliers/[id]`
+
+**9. Categories & Locations (7 routes):**
+- `/api/categories`
+- `/api/governorates`
+- `/api/cities`
+- `/api/areas`
+- وغيرها
+
+**10. Inventory Transfers (2 routes):**
+- `/api/inventory-transfers`
+- `/api/inventory-transfers/[id]`
+
+**11. Payment Links & Subscriptions (4 routes):**
+- `/api/payment-links`
+- `/api/subscriptions`
+- `/api/subscription/status`
+- `/api/plans`
+
+#### الملفات المُنشأة:
+
+**Models (13 ملف):**
+- `src/models/auth.model.ts`
+- `src/models/report.model.ts`
+- `src/models/accounting.model.ts`
+- `src/models/installment.model.ts`
+- `src/models/procurement.model.ts`
+- `src/models/return.model.ts`
+- `src/models/warehouse.model.ts`
+- `src/models/commission.model.ts`
+- `src/models/role.model.ts`
+- `src/models/supplier.model.ts`
+- `src/models/category.model.ts`
+- `src/models/location.model.ts`
+- `src/models/inventory-transfer.model.ts`
+- `src/models/payment-link.model.ts`
+- `src/models/subscription.model.ts`
+- `src/models/notification.model.ts`
+- `src/models/admin.model.ts`
+
+**Repositories (10+ ملف):**
+- `src/repositories/auth.repository.ts`
+- `src/repositories/report.repository.ts`
+- `src/repositories/accounting.repository.ts`
+- `src/repositories/installment.repository.ts`
+- `src/repositories/procurement.repository.ts`
+- `src/repositories/return.repository.ts`
+- `src/repositories/warehouse.repository.ts`
+- `src/repositories/commission.repository.ts`
+- `src/repositories/role.repository.ts`
+- `src/repositories/supplier.repository.ts`
+- وغيرها
+
+**Services (10+ ملف):**
+- `src/services/auth.service.ts`
+- `src/services/report.service.ts`
+- `src/services/accounting.service.ts`
+- `src/services/installment.service.ts`
+- `src/services/procurement.service.ts`
+- `src/services/return.service.ts`
+- `src/services/warehouse.service.ts`
+- `src/services/commission.service.ts`
+- وغيرها
+
+**Controllers (10+ ملف):**
+- `src/controllers/auth.controller.ts`
+- `src/controllers/report.controller.ts`
+- `src/controllers/accounting.controller.ts`
+- `src/controllers/installment.controller.ts`
+- `src/controllers/procurement.controller.ts`
+- `src/controllers/return.controller.ts`
+- `src/controllers/warehouse.controller.ts`
+- `src/controllers/commission.controller.ts`
+- وغيرها
+
+#### Stage Summary:
+- تم تحويل **أكثر من 50 API route** إلى MVC Architecture
+- تم إنشاء **أكثر من 50 ملف جديد** (Models, Repositories, Services, Controllers)
+- تم الحفاظ على التوافقية مع الـ code الموجود
+- تم إضافة معالجة الأخطاء والتحقق من الصلاحيات
+- جميع الـ routes تعمل بنفس الطريقة السابقة مع بنية أفضل
+
