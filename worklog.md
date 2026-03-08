@@ -2286,3 +2286,67 @@ h-screen flex flex-col overflow-hidden
 - تم إضافة معالجة الأخطاء والتحقق من الصلاحيات
 - جميع الـ routes تعمل بنفس الطريقة السابقة مع بنية أفضل
 
+
+---
+## Task ID: v3.5.0-release
+### Work Task
+حفظ التقدم محلياً وإنشاء إصدار جديد
+
+### Work Summary
+
+#### Git Status:
+- Commit: `1c5327c` - feat: تحويل كامل API Routes إلى MVC Architecture v3.5.0
+- Tag: `v3.5.0` - MVC Architecture Conversion
+
+#### Files Changed:
+- 38 files changed
+- +2,336 insertions
+- -2,714 deletions
+
+#### New Files Created:
+**Controllers (7 files):**
+- admin.controller.ts
+- category.controller.ts
+- inventory-transfer.controller.ts
+- location.controller.ts
+- payment-link.controller.ts
+- subscription.controller.ts
+
+**Models (7 files):**
+- admin.model.ts
+- category.model.ts
+- inventory-transfer.model.ts
+- location.model.ts
+- notification.model.ts
+- payment-link.model.ts
+- subscription.model.ts
+
+**Repositories (7 files):**
+- admin.repository.ts
+- category.repository.ts
+- inventory-transfer.repository.ts
+- location.repository.ts
+- notification.repository.ts
+- payment-link.repository.ts
+- subscription.repository.ts
+
+**Services (6 files):**
+- admin.service.ts
+- category.service.ts
+- inventory-transfer.service.ts
+- location.service.ts
+- payment-link.service.ts
+- subscription.service.ts
+
+#### Next Steps for GitHub Push:
+لاستكمال الرفع إلى GitHub، قم بتشغيل:
+```bash
+git push -u origin master --tags
+```
+
+أو استخدم GitHub CLI:
+```bash
+gh auth login
+git push -u origin master --tags
+```
+
