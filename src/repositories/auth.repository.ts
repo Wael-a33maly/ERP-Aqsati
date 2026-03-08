@@ -119,5 +119,63 @@ export const authRepository = {
       company: user.Company,
       branch: user.Branch
     }
+  },
+
+  // ==================== Debug Auth ====================
+
+  /**
+   * البحث عن مستخدم للـ debug مع بيانات الشركة والفرع
+   */
+  async findUserForDebug(email: string) {
+    return db.user.findUnique({
+      where: { email },
+      include: {
+        company: { select: { id: true, name: true } },
+        branch: { select: { id: true, name: true } },
+      }
+    })
+  },
+
+  /**
+   * تحديث بيانات المستخدم
+   */
+  async updateUser(id: string, data: any) {
+    return db.user.update({
+      where: { id },
+      data
+    })
+  },
+
+  /**
+   * إنشاء سوبر أدمن جديد
+   */
+  async createSuperAdmin(data: { email: string; name: string; nameAr: string; password: string }) {
+    return db.user.create({
+      data: {
+        email: data.email,
+        name: data.name,
+        nameAr: data.nameAr,
+        password: data.password,
+        role: 'SUPER_ADMIN',
+        active: true
+      }
+    })
+  },
+
+  /**
+   * البحث عن سوبر أدمن
+   */
+  async findSuperAdmin(email: string) {
+    return db.user.findFirst({
+      where: { email },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        active: true,
+        createdAt: true
+      }
+    })
   }
 }

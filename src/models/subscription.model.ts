@@ -49,3 +49,34 @@ export interface SubscriptionPaymentInput {
   transactionId?: string
   referenceNumber?: string
 }
+
+// طرق الدفع المتاحة
+export const PAYMENT_METHODS = [
+  { code: 'FAWRY', name: 'فوري', nameEn: 'Fawry', icon: 'fawry' },
+  { code: 'INSTAPAY', name: 'انستا باي', nameEn: 'InstaPay', icon: 'instapay' },
+  { code: 'VODAFONE_CASH', name: 'فودافون كاش', nameEn: 'Vodafone Cash', icon: 'vodafone' },
+  { code: 'ORANGE_MONEY', name: 'أورنج موني', nameEn: 'Orange Money', icon: 'orange' },
+  { code: 'ETISALAT_CASH', name: 'اتصالات كاش', nameEn: 'Etisalat Cash', icon: 'etisalat' },
+  { code: 'BANK_TRANSFER', name: 'تحويل بنكي', nameEn: 'Bank Transfer', icon: 'bank' },
+  { code: 'CASH', name: 'نقدي', nameEn: 'Cash', icon: 'cash' }
+] as const
+
+export interface PaymentTransactionQueryParams {
+  companyId?: string
+  subscriptionId?: string
+}
+
+export interface CreatePaymentTransactionInput {
+  subscriptionId: string
+  companyId?: string
+  amount?: number
+  paymentMethod: string
+  currency?: string
+}
+
+export interface UpdatePaymentTransactionInput {
+  id: string
+  action?: 'confirm' | 'reject' | 'refund'
+  transactionId?: string
+  notes?: string
+}

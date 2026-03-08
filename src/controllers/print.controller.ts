@@ -421,4 +421,37 @@ export const printController = {
       )
     }
   },
+
+  // ==================== Receipt Print Logs ====================
+
+  // GET - جلب سجلات طباعة الإيصالات
+  async getReceiptPrintLogs(request: NextRequest) {
+    try {
+      const { searchParams } = new URL(request.url)
+      const params = {
+        companyId: searchParams.get('companyId') || undefined,
+        invoiceId: searchParams.get('invoiceId') || undefined,
+        installmentId: searchParams.get('installmentId') || undefined,
+        limit: parseInt(searchParams.get('limit') || '50'),
+      }
+
+      const logs = await printService.getReceiptPrintLogs(params)
+      return NextResponse.json(logs)
+    } catch (error: any) {
+      console.error('Error fetching receipt print logs:', error)
+      return NextResponse.json({ error: 'Failed to fetch receipt print logs' }, { status: 500 })
+    }
+  },
+
+  // POST - إنشاء سجل طباعة إيصال
+  async createReceiptPrintLog(request: NextRequest) {
+    try {
+      const data = await request.json()
+      const printLog = await printService.createReceiptPrintLog(data)
+      return NextResponse.json(printLog, { status: 201 })
+    } catch (error: any) {
+      console.error('Error logging receipt print:', error)
+      return NextResponse.json({ error: 'Failed to log receipt print' }, { status: 500 })
+    }
+  },
 }

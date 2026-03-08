@@ -54,3 +54,32 @@ export interface JwtPayload {
   iat?: number
   exp?: number
 }
+
+// Debug Auth Types
+export interface DebugAuthInput {
+  email: string
+  password: string
+}
+
+export interface DebugAuthResponse {
+  user: {
+    id: string
+    email: string
+    name: string
+    role: string
+    companyId?: string | null
+    branchId?: string | null
+    company?: { id: string; name: string } | null
+    branch?: { id: string; name: string } | null
+  }
+  token: string
+}
+
+// Super Admin Update Types
+export interface SuperAdminUpdateResult {
+  success: boolean
+  message: string
+  email: string
+  password: string
+  isNew?: boolean
+}

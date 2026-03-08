@@ -4,7 +4,7 @@
  */
 
 import { db } from '@/lib/db'
-import type { SubscriptionQueryParams, SubscriptionInput, SubscriptionPaymentInput } from '@/models/subscription.model'
+import type { SubscriptionQueryParams, SubscriptionInput, SubscriptionPaymentInput, PaymentTransactionQueryParams, CreatePaymentTransactionInput } from '@/models/subscription.model'
 
 export const subscriptionRepository = {
   async findSubscriptions(params: SubscriptionQueryParams) {
@@ -106,6 +106,52 @@ export const subscriptionRepository = {
         status: 'completed',
         paidAt: new Date()
       }
+    })
+  },
+
+  // ============ Payment Transactions ============
+  async findPaymentTransactions(params: PaymentTransactionQueryParams) {
+    const where: any = {}
+    if (params.companyId) where.companyId = params.companyId
+    if (params.subscriptionId) where.subscriptionId = params.subscriptionId
+
+    return db.paymentTransaction.findMany({
+      where,
+      orderBy: { createdAt: 'desc' }
+    })
+  },
+
+  async findPaymentTransactionById(id: string) {
+    return db.paymentTransaction.findUnique({
+      where: { id },
+      include: {
+        Subscription: { include: { Plan: true } }
+      }
+    })
+  },
+
+  async createPaymentTransactionWithMetadata(data: any) {
+    return db.paymentTransaction.create({ data })
+  },
+
+  async updatePaymentTransaction(id: string, data: any) {
+    return db.paymentTransaction.update({
+      where: { id },
+      data: { ...data, updatedAt: new Date() }
+    })
+  },
+
+  async updateSubscriptionStatus(id: string, data: any) {
+    return db.subscription.update({
+      where: { id },
+      data: { ...data, updatedAt: new Date() }
+    })
+  },
+
+  async updateCompanySubscriptionStatus(companyId: string, status: string) {
+    return db.company.update({
+      where: { id: companyId },
+      data: { subscriptionStatus: status, updatedAt: new Date() }
     })
   }
 }

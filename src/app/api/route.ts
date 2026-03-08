@@ -1,5 +1,12 @@
-import { NextResponse } from "next/server";
+/**
+ * Health API Routes
+ * تم التحويل إلى MVC Architecture
+ */
 
-export async function GET() {
-  return NextResponse.json({ message: "Hello, world!" });
+import { NextRequest } from 'next/server'
+import { healthController } from '@/controllers/health.controller'
+
+// GET - فحص صحة التطبيق
+export async function GET(request: NextRequest) {
+  return healthController.check(request)
 }

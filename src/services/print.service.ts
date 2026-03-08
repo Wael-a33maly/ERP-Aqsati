@@ -17,6 +17,8 @@ import {
   BatchPrintPreviewResponse,
   DocumentType,
   PaperSize,
+  ReceiptPrintLogQueryParams,
+  CreateReceiptPrintLogInput,
 } from '@/models/print.model'
 
 export const printService = {
@@ -355,6 +357,28 @@ export const printService = {
       paperSize: template?.paperSize || 'A4',
       orientation: template?.orientation || 'portrait',
     }
+  },
+
+  // ==================== Receipt Print Logs ====================
+
+  // جلب سجلات طباعة الإيصالات
+  async getReceiptPrintLogs(params: ReceiptPrintLogQueryParams) {
+    return printRepository.findReceiptPrintLogs(params)
+  },
+
+  // إنشاء سجل طباعة إيصال
+  async createReceiptPrintLog(data: CreateReceiptPrintLogInput) {
+    // التحقق من وجود طباعة سابقة
+    const existingPrint = await printRepository.findLatestReceiptPrint(data.companyId, data.installmentId)
+
+    const printLog = await printRepository.createReceiptPrintLog({
+      ...data,
+      isReprint: data.isReprint || !!existingPrint,
+      originalPrintId: data.originalPrintId || existingPrint?.id,
+      printCount: existingPrint ? existingPrint.printCount + 1 : 1,
+    })
+
+    return printLog
   },
 }
 

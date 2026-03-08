@@ -4,7 +4,7 @@
  */
 
 import { db } from '@/lib/db'
-import type { GovernorateQueryParams, GovernorateInput, CityQueryParams, CityInput, AreaQueryParams, AreaInput } from '@/models/location.model'
+import type { GovernorateQueryParams, GovernorateInput, CityQueryParams, CityInput, AreaQueryParams, AreaInput, EgyptLocationsImportInput, EgyptLocationsDeleteInput } from '@/models/location.model'
 
 export const locationRepository = {
   // ==================== Governorates ====================
@@ -214,5 +214,102 @@ export const locationRepository = {
       where: { id },
       data: { active: false }
     })
+  },
+
+  // ==================== Egypt Locations Import ====================
+
+  async findGovernoratesByCompany(companyId: string) {
+    return db.governorate.findMany({
+      where: { companyId },
+      select: { code: true }
+    })
+  },
+
+  async findImportedGovernorates(companyId: string) {
+    return db.governorate.findMany({
+      where: { companyId },
+      include: {
+        City: {
+          include: {
+            _count: { select: { Customer: true } },
+            Area: { select: { id: true } }
+          }
+        },
+        _count: { select: { Customer: true } }
+      },
+      orderBy: { name: 'asc' }
+    })
+  },
+
+  async findGovernorateByCode(companyId: string, code: string) {
+    return db.governorate.findFirst({
+      where: { companyId, code }
+    })
+  },
+
+  async createGovernorateWithCompany(companyId: string, data: { code: string; name: string; nameAr: string }) {
+    return db.governorate.create({
+      data: {
+        companyId,
+        code: data.code,
+        name: data.name,
+        nameAr: data.nameAr,
+        active: true
+      }
+    })
+  },
+
+  async createCityWithCompany(companyId: string, governorateId: string, data: { code: string; name: string; nameAr: string }) {
+    return db.city.create({
+      data: {
+        companyId,
+        governorateId,
+        code: data.code,
+        name: data.name,
+        nameAr: data.nameAr,
+        active: true
+      }
+    })
+  },
+
+  async createAreaWithCompany(companyId: string, cityId: string, data: { code: string; name: string; nameAr: string }) {
+    return db.area.create({
+      data: {
+        companyId,
+        cityId,
+        code: data.code,
+        name: data.name,
+        nameAr: data.nameAr,
+        active: true
+      }
+    })
+  },
+
+  async findGovernorateWithCustomers(id: string, companyId: string) {
+    return db.governorate.findFirst({
+      where: { id, companyId },
+      include: {
+        City: {
+          include: {
+            _count: { select: { Customer: true } }
+          }
+        },
+        _count: { select: { Customer: true } }
+      }
+    })
+  },
+
+  async deleteGovernorateHard(id: string) {
+    return db.governorate.delete({ where: { id } })
+  },
+
+  async deleteAllCompanyLocations(companyId: string) {
+    await db.area.deleteMany({ where: { companyId } })
+    await db.city.deleteMany({ where: { companyId } })
+    await db.governorate.deleteMany({ where: { companyId } })
+  },
+
+  async deleteGovernorateHard(id: string) {
+    return db.governorate.delete({ where: { id } })
   }
 }

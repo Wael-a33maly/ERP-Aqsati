@@ -170,3 +170,27 @@ export interface BatchPrintPreviewResponse {
   paperSize: PaperSize
   orientation: Orientation
 }
+
+// Receipt Print Log Types
+export interface ReceiptPrintLogQueryParams {
+  companyId?: string
+  invoiceId?: string
+  installmentId?: string
+  limit?: number
+}
+
+export interface CreateReceiptPrintLogInput {
+  companyId: string
+  branchId?: string
+  installmentId?: string
+  invoiceId?: string
+  customerId?: string
+  contractNumber?: string
+  installmentNumber?: string
+  printedBy?: string
+  templateId?: string
+  isReprint?: boolean
+  originalPrintId?: string
+  printMethod?: string
+  notes?: string
+}

@@ -13,6 +13,8 @@ import {
   PrintJobWithRelations,
   PrintTemplateWithRelations,
   DocumentType,
+  ReceiptPrintLogQueryParams,
+  CreateReceiptPrintLogInput,
 } from '@/models/print.model'
 
 export const printRepository = {
@@ -326,4 +328,55 @@ export const printRepository = {
         return null
     }
   },
+
+  // ==================== Receipt Print Logs ====================
+
+  // جلب سجلات طباعة الإيصالات
+  async findReceiptPrintLogs(params: ReceiptPrintLogQueryParams) {
+    const where: any = {}
+    if (params.companyId) where.companyId = params.companyId
+    if (params.invoiceId) where.invoiceId = params.invoiceId
+    if (params.installmentId) where.installmentId = params.installmentId
+
+    return db.receiptPrintLog.findMany({
+      where,
+      orderBy: { printedAt: 'desc' },
+      take: params.limit || 50,
+    })
+  },
+
+  // جلب آخر طباعة لإيصال
+  async findLatestReceiptPrint(companyId: string, installmentId?: string) {
+    if (!installmentId) return null
+    
+    return db.receiptPrintLog.findFirst({
+      where: {
+        companyId,
+        installmentId,
+      },
+      orderBy: { printedAt: 'desc' }
+    })
+  },
+
+  // إنشاء سجل طباعة إيصال
+  async createReceiptPrintLog(data: CreateReceiptPrintLogInput & { printCount: number }) {
+    return db.receiptPrintLog.create({
+      data: {
+        companyId: data.companyId,
+        branchId: data.branchId,
+        installmentId: data.installmentId,
+        invoiceId: data.invoiceId,
+        customerId: data.customerId,
+        contractNumber: data.contractNumber,
+        installmentNumber: data.installmentNumber,
+        printedBy: data.printedBy,
+        templateId: data.templateId,
+        isReprint: data.isReprint || false,
+        originalPrintId: data.originalPrintId,
+        printCount: data.printCount,
+        printMethod: data.printMethod || 'PRINT',
+        notes: data.notes,
+      }
+    })
+  }
 }

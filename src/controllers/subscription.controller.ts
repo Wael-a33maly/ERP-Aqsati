@@ -53,5 +53,77 @@ export const subscriptionController = {
     } catch (error: any) {
       return NextResponse.json({ success: false, error: error.message }, { status: 500 })
     }
+  },
+
+  // ============ Payment Transactions ============
+  async getPaymentTransactions(request: NextRequest) {
+    try {
+      const { searchParams } = new URL(request.url)
+      const action = searchParams.get('action')
+
+      if (action === 'methods') {
+        const methods = subscriptionService.getPaymentMethods()
+        return NextResponse.json({ success: true, data: methods })
+      }
+
+      const params = {
+        companyId: searchParams.get('companyId') || undefined,
+        subscriptionId: searchParams.get('subscriptionId') || undefined
+      }
+
+      const payments = await subscriptionService.getPaymentTransactions(params)
+      return NextResponse.json({ success: true, data: payments })
+    } catch (error: any) {
+      console.error('Error fetching payments:', error)
+      return NextResponse.json({ success: false, error: 'فشل في جلب المدفوعات' }, { status: 500 })
+    }
+  },
+
+  async createPaymentTransaction(request: NextRequest) {
+    try {
+      const body = await request.json()
+      const { subscriptionId, companyId, amount, paymentMethod, currency } = body
+
+      const result = await subscriptionService.createPaymentTransaction({
+        subscriptionId,
+        companyId,
+        amount,
+        paymentMethod,
+        currency
+      })
+
+      return NextResponse.json({
+        success: true,
+        data: result.payment,
+        message: result.instructions
+      })
+    } catch (error: any) {
+      console.error('Error creating payment:', error)
+      return NextResponse.json({ success: false, error: error.message || 'فشل في إنشاء عملية الدفع' }, { status: 500 })
+    }
+  },
+
+  async updatePaymentTransaction(request: NextRequest) {
+    try {
+      const body = await request.json()
+      const { id, action, transactionId, notes, ...restData } = body
+
+      const result = await subscriptionService.updatePaymentTransaction({
+        id,
+        action,
+        transactionId,
+        notes,
+        ...restData
+      })
+
+      return NextResponse.json({
+        success: true,
+        data: result.payment,
+        message: result.message
+      })
+    } catch (error: any) {
+      console.error('Error updating payment:', error)
+      return NextResponse.json({ success: false, error: error.message || 'فشل في تحديث عملية الدفع' }, { status: 500 })
+    }
   }
 }

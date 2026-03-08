@@ -48,3 +48,15 @@ export interface AreaInput {
   code?: string
   active?: boolean
 }
+
+// Egypt Locations Import Types
+export interface EgyptLocationsImportInput {
+  companyId: string
+  governorateCodes: string[]
+}
+
+export interface EgyptLocationsDeleteInput {
+  governorateId?: string
+  companyId: string
+  resetAll?: boolean
+}
