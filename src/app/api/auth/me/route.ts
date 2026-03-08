@@ -1,18 +1,11 @@
-import { getCurrentUser } from '@/lib/auth';
-import { successResponse, unauthorizedResponse } from '@/lib/utils/response';
+/**
+ * Auth Me API Route
+ * تم التحويل إلى MVC Architecture
+ */
 
-export async function GET() {
-  try {
-    const user = await getCurrentUser();
-    
-    if (!user) {
-      return unauthorizedResponse('Not authenticated');
-    }
-    
-    return successResponse({ user });
-    
-  } catch (error) {
-    console.error('Get current user error:', error);
-    return unauthorizedResponse('Not authenticated');
-  }
+import { NextRequest } from 'next/server'
+import { authController } from '@/controllers/auth.controller'
+
+export async function GET(request: NextRequest) {
+  return authController.me(request)
 }
