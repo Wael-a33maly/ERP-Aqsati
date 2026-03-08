@@ -4,7 +4,19 @@
  */
 
 import { db } from '@/lib/db'
-import { GenerateReportInput, ReportQueryParams, SalesReportParams, CollectionReportParams, InventoryReportParams } from '@/models/report.model'
+import {
+  GenerateReportInput,
+  ReportQueryParams,
+  SalesReportParams,
+  CollectionReportParams,
+  InventoryReportParams,
+  InventoryValuationParams,
+  InventoryValuationResponse,
+  CreateReportTemplateInput,
+  UpdateReportTemplateInput,
+  ReportTemplateQueryParams,
+  REPORT_TYPES
+} from '@/models/report.model'
 import { getCurrentUser } from '@/lib/auth'
 import { hasPermission, PERMISSIONS } from '@/lib/rbac'
 
@@ -379,4 +391,363 @@ export const inventoryReportService = {
   async getReport(params: InventoryReportParams) {
     return reportService.generateInventoryReport(params)
   },
+}
+
+/**
+ * Inventory Valuation Service
+ * خدمة تقرير أرصدة المخازن
+ */
+export const inventoryValuationService = {
+  async getReport(params: InventoryValuationParams): Promise<InventoryValuationResponse> {
+    const { companyId, warehouseId, productId, categoryId, minQuantity, maxQuantity, showZeroStock } = params
+
+    // بناء شروط البحث
+    const inventoryWhere: any = {}
+
+    if (warehouseId) {
+      inventoryWhere.warehouseId = warehouseId
+    }
+
+    if (!showZeroStock) {
+      inventoryWhere.quantity = { gt: 0 }
+    }
+
+    if (minQuantity !== undefined) {
+      inventoryWhere.quantity = { ...inventoryWhere.quantity, gte: minQuantity }
+    }
+
+    if (maxQuantity !== undefined) {
+      inventoryWhere.quantity = { ...inventoryWhere.quantity, lte: maxQuantity }
+    }
+
+    const productWhere: any = { companyId }
+    if (categoryId) productWhere.categoryId = categoryId
+    if (productId) productWhere.id = productId
+
+    // جلب المنتجات مع أرصدتها
+    const products = await db.product.findMany({
+      where: productWhere,
+      include: {
+        ProductCategory: { select: { id: true, name: true, nameAr: true } },
+        Supplier: { select: { id: true, name: true, supplierCode: true } },
+        Inventory: {
+          where: inventoryWhere,
+          include: {
+            Warehouse: { select: { id: true, name: true, nameAr: true, branchId: true } }
+          }
+        }
+      },
+      orderBy: { name: 'asc' }
+    })
+
+    // تجهيز التقرير
+    const data = products.map(product => {
+      const inventories = product.Inventory.map(inv => ({
+        warehouseId: inv.warehouseId,
+        warehouseName: inv.Warehouse.name,
+        warehouseNameAr: inv.Warehouse.nameAr,
+        quantity: inv.quantity,
+        reservedQuantity: inv.reservedQuantity,
+        availableQuantity: inv.quantity - inv.reservedQuantity,
+        avgCost: inv.avgCost,
+        totalCost: inv.totalCost,
+        minQuantity: inv.minQuantity,
+        maxQuantity: inv.maxQuantity,
+        lastPurchaseDate: inv.lastPurchaseDate,
+        lastPurchaseCost: inv.lastPurchaseCost,
+        isLowStock: inv.quantity <= inv.minQuantity
+      }))
+
+      const totalQuantity = inventories.reduce((sum, inv) => sum + inv.quantity, 0)
+      const totalValue = inventories.reduce((sum, inv) => sum + (inv.totalCost || 0), 0)
+      const avgUnitCost = totalQuantity > 0 ? totalValue / totalQuantity : 0
+
+      return {
+        productId: product.id,
+        productSku: product.sku,
+        productName: product.name,
+        productNameAr: product.nameAr,
+        unit: product.unit,
+        costPrice: product.costPrice,
+        sellPrice: product.sellPrice,
+        category: product.ProductCategory,
+        supplier: product.Supplier,
+        inventories,
+        totalQuantity,
+        totalValue,
+        avgUnitCost
+      }
+    })
+
+    // حساب الإجماليات
+    const summary = {
+      totalProducts: data.length,
+      totalQuantity: data.reduce((sum, p) => sum + p.totalQuantity, 0),
+      totalValue: data.reduce((sum, p) => sum + p.totalValue, 0),
+      lowStockCount: data.filter(p => p.inventories.some(inv => inv.isLowStock)).length,
+      zeroStockCount: data.filter(p => p.totalQuantity === 0).length
+    }
+
+    return { data, summary }
+  }
+}
+
+/**
+ * Report Template Service
+ * خدمة قوالب التقارير
+ */
+export const reportTemplateService = {
+  async getTemplates(params: ReportTemplateQueryParams, user: any) {
+    const { page = 1, limit = 50, companyId, type, isDefault, active } = params
+    const skip = (page - 1) * limit
+
+    // Build where clause
+    const where: any = {}
+
+    // Apply company filter based on user role
+    if (user.role !== 'SUPER_ADMIN') {
+      if (!user.companyId) {
+        return { success: true, data: [], pagination: { page, limit, total: 0, totalPages: 0 } }
+      }
+      where.companyId = user.companyId
+    } else if (companyId) {
+      where.companyId = companyId
+    }
+
+    if (type && REPORT_TYPES.includes(type)) {
+      where.type = type
+    }
+
+    if (isDefault !== undefined) {
+      where.isDefault = isDefault
+    }
+
+    if (active !== undefined) {
+      where.active = active
+    }
+
+    const [templates, total] = await Promise.all([
+      db.reportTemplate.findMany({
+        where,
+        skip,
+        take: limit,
+        include: {
+          company: {
+            select: { id: true, name: true, code: true },
+          },
+          _count: {
+            select: { reports: true },
+          },
+        },
+        orderBy: [
+          { isDefault: 'desc' },
+          { createdAt: 'desc' },
+        ],
+      }),
+      db.reportTemplate.count({ where }),
+    ])
+
+    // Parse JSON fields
+    const parsedTemplates = templates.map(template => ({
+      ...template,
+      config: JSON.parse(template.config),
+      filters: template.filters ? JSON.parse(template.filters) : null,
+      columns: template.columns ? JSON.parse(template.columns) : null,
+    }))
+
+    return {
+      success: true,
+      data: parsedTemplates,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    }
+  },
+
+  async createTemplate(input: CreateReportTemplateInput, user: any) {
+    const { companyId, name, nameAr, type, config, filters, columns, isDefault = false } = input
+
+    // Validate required fields
+    if (!name || !type) {
+      throw new Error('Name and type are required')
+    }
+
+    // Validate type
+    if (!REPORT_TYPES.includes(type)) {
+      throw new Error(`Invalid report type. Must be one of: ${REPORT_TYPES.join(', ')}`)
+    }
+
+    // Determine company
+    const targetCompanyId = user.role === 'SUPER_ADMIN' ? companyId : user.companyId
+    if (!targetCompanyId) {
+      throw new Error('Company ID is required')
+    }
+
+    // If setting as default, unset other defaults for this type
+    if (isDefault) {
+      await db.reportTemplate.updateMany({
+        where: { companyId: targetCompanyId, type },
+        data: { isDefault: false },
+      })
+    }
+
+    // Create template
+    const template = await db.reportTemplate.create({
+      data: {
+        companyId: targetCompanyId,
+        name,
+        nameAr,
+        type,
+        config: JSON.stringify(config || {}),
+        filters: filters ? JSON.stringify(filters) : null,
+        columns: columns ? JSON.stringify(columns) : null,
+        isDefault,
+        active: true,
+      },
+      include: {
+        company: {
+          select: { id: true, name: true, code: true },
+        },
+      },
+    })
+
+    // Create audit log
+    await db.auditLog.create({
+      data: {
+        companyId: targetCompanyId,
+        userId: user.id,
+        action: 'CREATE',
+        entityType: 'ReportTemplate',
+        entityId: template.id,
+        newData: JSON.stringify(template),
+      },
+    })
+
+    return {
+      ...template,
+      config: JSON.parse(template.config),
+      filters: template.filters ? JSON.parse(template.filters) : null,
+      columns: template.columns ? JSON.parse(template.columns) : null,
+    }
+  },
+
+  async updateTemplate(input: UpdateReportTemplateInput, user: any) {
+    const { id, name, nameAr, type, config, filters, columns, isDefault, active } = input
+
+    if (!id) {
+      throw new Error('Template ID is required')
+    }
+
+    // Get existing template
+    const existingTemplate = await db.reportTemplate.findUnique({
+      where: { id },
+    })
+
+    if (!existingTemplate) {
+      throw new Error('Template not found')
+    }
+
+    // Check company access
+    if (user.role !== 'SUPER_ADMIN' && user.companyId !== existingTemplate.companyId) {
+      throw new Error('Forbidden')
+    }
+
+    // Validate type if provided
+    if (type && !REPORT_TYPES.includes(type)) {
+      throw new Error(`Invalid report type. Must be one of: ${REPORT_TYPES.join(', ')}`)
+    }
+
+    // If setting as default, unset other defaults for this type
+    if (isDefault) {
+      await db.reportTemplate.updateMany({
+        where: {
+          companyId: existingTemplate.companyId,
+          type: type || existingTemplate.type,
+          id: { not: id },
+        },
+        data: { isDefault: false },
+      })
+    }
+
+    // Build update data
+    const updateData: any = {}
+    if (name !== undefined) updateData.name = name
+    if (nameAr !== undefined) updateData.nameAr = nameAr
+    if (type !== undefined) updateData.type = type
+    if (config !== undefined) updateData.config = JSON.stringify(config)
+    if (filters !== undefined) updateData.filters = filters ? JSON.stringify(filters) : null
+    if (columns !== undefined) updateData.columns = columns ? JSON.stringify(columns) : null
+    if (isDefault !== undefined) updateData.isDefault = isDefault
+    if (active !== undefined) updateData.active = active
+
+    // Update template
+    const template = await db.reportTemplate.update({
+      where: { id },
+      data: updateData,
+      include: {
+        company: {
+          select: { id: true, name: true, code: true },
+        },
+      },
+    })
+
+    // Create audit log
+    await db.auditLog.create({
+      data: {
+        companyId: existingTemplate.companyId,
+        userId: user.id,
+        action: 'UPDATE',
+        entityType: 'ReportTemplate',
+        entityId: template.id,
+        oldData: JSON.stringify(existingTemplate),
+        newData: JSON.stringify(template),
+      },
+    })
+
+    return {
+      ...template,
+      config: JSON.parse(template.config),
+      filters: template.filters ? JSON.parse(template.filters) : null,
+      columns: template.columns ? JSON.parse(template.columns) : null,
+    }
+  },
+
+  async deleteTemplate(id: string, user: any) {
+    // Get existing template
+    const existingTemplate = await db.reportTemplate.findUnique({
+      where: { id },
+    })
+
+    if (!existingTemplate) {
+      throw new Error('Template not found')
+    }
+
+    // Check company access
+    if (user.role !== 'SUPER_ADMIN' && user.companyId !== existingTemplate.companyId) {
+      throw new Error('Forbidden')
+    }
+
+    // Soft delete by setting active to false
+    const template = await db.reportTemplate.update({
+      where: { id },
+      data: { active: false },
+    })
+
+    // Create audit log
+    await db.auditLog.create({
+      data: {
+        companyId: existingTemplate.companyId,
+        userId: user.id,
+        action: 'DELETE',
+        entityType: 'ReportTemplate',
+        entityId: template.id,
+        oldData: JSON.stringify(existingTemplate),
+      },
+    })
+
+    return template
+  }
 }
