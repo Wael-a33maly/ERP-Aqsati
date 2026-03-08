@@ -1,0 +1,1448 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./erp.db"
+}
+
+model AgentCommission {
+  id               String            @id @default(cuid())
+  agentId          String
+  policyId         String?
+  type             String
+  referenceType    String
+  referenceId      String
+  amount           Float             @default(0)
+  status           String            @default("pending")
+  paidDate         DateTime?
+  notes            String?
+  createdAt        DateTime          @default(now())
+  CommissionPolicy CommissionPolicy? @relation(fields: [policyId], references: [id])
+  User             User              @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@index([agentId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model AgentLocation {
+  id        String   @id @default(cuid())
+  agentId   String
+  latitude  Float
+  longitude Float
+  accuracy  Float?
+  speed     Float?
+  battery   Float?
+  isOnline  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  User      User     @relation(fields: [agentId], references: [id], onDelete: Cascade)
+}
+
+model Area {
+  id        String     @id @default(cuid())
+  companyId String
+  cityId    String
+  name      String
+  nameAr    String?
+  code      String
+  active    Boolean    @default(true)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime @updatedAt
+  City      City       @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  Company   Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  Customer  Customer[]
+
+  @@unique([companyId, code])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  companyId  String?
+  branchId   String?
+  userId     String?
+  action     String
+  entityType String
+  entityId   String?
+  oldData    String?
+  newData    String?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+  User       User?    @relation(fields: [userId], references: [id])
+  Branch     Branch?  @relation(fields: [branchId], references: [id])
+  Company    Company? @relation(fields: [companyId], references: [id])
+
+  @@index([companyId, createdAt])
+  @@index([userId])
+  @@index([entityType, entityId])
+  @@index([action])
+}
+
+model Branch {
+  id               String             @id @default(cuid())
+  companyId        String
+  name             String
+  nameAr           String?
+  code             String
+  address          String?
+  phone            String?
+  active           Boolean            @default(true)
+  isMain           Boolean            @default(false)
+  createdAt        DateTime           @default(now())
+  updatedAt DateTime @updatedAt
+  AuditLog         AuditLog[]
+  Company          Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  CommissionPolicy CommissionPolicy[]
+  Customer         Customer[]
+  FromTransfers    InventoryTransfer[] @relation("TransferFromBranch")
+  ToTransfers      InventoryTransfer[] @relation("TransferToBranch")
+  Invoice          Invoice[]
+  Payment          Payment[]
+  PurchaseInvoice  PurchaseInvoice[]
+  PurchaseReturn   PurchaseReturn[]
+  Return           Return[]
+  SupplierPayment  SupplierPayment[]
+  User             User[]
+  Warehouse        Warehouse[]
+  Zone             Zone[]
+
+  @@unique([companyId, code])
+}
+
+model City {
+  id            String      @id @default(cuid())
+  companyId     String
+  governorateId String
+  name          String
+  nameAr        String?
+  code          String
+  active        Boolean     @default(true)
+  createdAt     DateTime    @default(now())
+  updatedAt DateTime @updatedAt
+  Area          Area[]
+  Governorate   Governorate @relation(fields: [governorateId], references: [id], onDelete: Cascade)
+  Company       Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  Customer      Customer[]
+
+  @@unique([companyId, code])
+}
+
+model CommissionPolicy {
+  id              String            @id @default(cuid())
+  companyId       String
+  branchId        String?
+  agentId         String?
+  name            String
+  nameAr          String?
+  type            String
+  calculationType String
+  value           Float             @default(0)
+  perItem         Boolean           @default(false)
+  minAmount       Float?
+  maxAmount       Float?
+  active          Boolean           @default(true)
+  createdAt       DateTime          @default(now())
+  updatedAt DateTime @updatedAt
+  AgentCommission AgentCommission[]
+  User            User?             @relation(fields: [agentId], references: [id])
+  Branch          Branch?           @relation(fields: [branchId], references: [id])
+  Company         Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+}
+
+model Company {
+  id                 String             @id @default(cuid())
+  name               String
+  nameAr             String?
+  code               String             @unique
+  logo               String?
+  email              String?
+  phone              String?
+  address            String?
+  taxNumber          String?
+  discountEnabled    Boolean            @default(true)
+  taxRate            Float              @default(15)
+  currency           String             @default("EGP")
+  settings           String?
+  subscriptionStatus String             @default("trial")
+  planType           String             @default("free")
+  trialEndsAt        DateTime?
+  active             Boolean            @default(true)
+  createdAt          DateTime           @default(now())
+  updatedAt DateTime @updatedAt
+  Area               Area[]
+  AuditLog           AuditLog[]
+  Branch             Branch[]
+  City               City[]
+  CommissionPolicy   CommissionPolicy[]
+  CompanyPaymentGateway CompanyPaymentGateway[]
+  CostLayer          CostLayer[]
+  Customer           Customer[]
+  Governorate        Governorate[]
+  InventoryTransfer  InventoryTransfer[]
+  InventoryValuation InventoryValuation[]
+  PrintTemplate      PrintTemplate[]
+  Product            Product[]
+  ProductCategory    ProductCategory[]
+  PurchaseInvoice    PurchaseInvoice[]
+  PurchaseReturn     PurchaseReturn[]
+  ReportTemplate     ReportTemplate[]
+  Supplier           Supplier[]
+  SupplierPayment    SupplierPayment[]
+  SupplierTransaction SupplierTransaction[]
+  User               User[]
+  Warehouse          Warehouse[]
+  Zone               Zone[]
+  Invoice            Invoice[]
+  Payment            Payment[]
+  Return             Return[]
+  Subscription       Subscription?
+  ImpersonationTargets ImpersonationSession[] @relation("ImpersonationTargetCompany")
+}
+
+model CompanyMarketplaceSettings {
+  id                   String   @id @default(cuid())
+  companyId            String   @unique
+  canAccessMarketplace Boolean  @default(true)
+  canInstallFree       Boolean  @default(true)
+  canInstallPaid       Boolean  @default(false)
+  canCreateCustom      Boolean  @default(true)
+  maxCustomTemplates   Int      @default(10)
+  installedTemplates   Int      @default(0)
+  customTemplates      Int      @default(0)
+  createdAt            DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model CompanyPaymentGateway {
+  id                String   @id @default(cuid())
+  companyId         String
+  gatewayType       String   // fawry, vodafone_cash, orange_cash, etisalat_cash, we_pay, instapay, meeza, visa
+  name              String
+  nameAr            String?
+  merchantId        String?
+  merchantSecret    String?
+  apiKey            String?
+  apiSecret         String?
+  walletNumber      String?
+  accountNumber     String?
+  bankCode          String?
+  callbackUrl       String?
+  webhookSecret     String?
+  isLive            Boolean  @default(false)
+  isActive          Boolean  @default(true)
+  isDefault         Boolean  @default(false)
+  feesPercent       Float    @default(0)
+  feesFixed         Float    @default(0)
+  minAmount         Float?
+  maxAmount         Float?
+  settlementDays    Int      @default(1)
+  settings          String?  // JSON for additional settings
+  lastTestAt        DateTime?
+  lastTestStatus    String?
+  lastTestMessage   String?
+  createdAt         DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  Company           Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, gatewayType])
+  @@index([companyId])
+  @@index([isActive])
+}
+
+model CompanyReceiptTemplate {
+  id                       String                 @id @default(cuid())
+  companyId                String
+  branchId                 String?
+  name                     String
+  nameAr                   String?
+  code                     String
+  templateJson             String
+  isDefault                Boolean                @default(false)
+  isActive                 Boolean                @default(true)
+  installedFromMarketplace String?
+  paperSize                String                 @default("A4_THIRD")
+  customWidth              Float?
+  customHeight             Float?
+  marginTop                Float                  @default(5)
+  marginBottom             Float                  @default(5)
+  marginLeft               Float                  @default(5)
+  marginRight              Float                  @default(5)
+  createdBy                String?
+  lastModifiedBy           String?
+  createdAt                DateTime               @default(now())
+  updatedAt DateTime @updatedAt
+  GlobalReceiptTemplate    GlobalReceiptTemplate? @relation(fields: [installedFromMarketplace], references: [id])
+  ReceiptPrintLog          ReceiptPrintLog[]
+
+  @@unique([companyId, code])
+}
+
+model Coupon {
+  id            String   @id @default(cuid())
+  code          String   @unique
+  description   String?
+  discountType  String   @default("PERCENTAGE")
+  discountValue Float    @default(0)
+  maxDiscount   Float?
+  minAmount     Float?
+  usageLimit    Int?
+  usedCount     Int      @default(0)
+  planId        String?
+  validFrom     DateTime
+  validUntil    DateTime
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Customer {
+  id                  String                @id @default(cuid())
+  companyId           String
+  branchId            String?
+  governorateId       String?
+  cityId              String?
+  areaId              String?
+  zoneId              String?
+  agentId             String?
+  code                String
+  name                String
+  nameAr              String?
+  phone               String?
+  phone2              String?
+  address             String?
+  nationalId          String?
+  creditLimit         Float                 @default(0)
+  balance             Float                 @default(0)
+  notes               String?
+  active              Boolean               @default(true)
+  createdAt           DateTime              @default(now())
+  updatedAt DateTime @updatedAt
+  User                User?                 @relation(fields: [agentId], references: [id])
+  Zone                Zone?                 @relation(fields: [zoneId], references: [id])
+  Area                Area?                 @relation(fields: [areaId], references: [id])
+  City                City?                 @relation(fields: [cityId], references: [id])
+  Governorate         Governorate?          @relation(fields: [governorateId], references: [id])
+  Branch              Branch?               @relation(fields: [branchId], references: [id])
+  Company             Company               @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  InstallmentContract InstallmentContract[]
+  Invoice             Invoice[]
+  Payment             Payment[]
+  PaymentLink         PaymentLink[]
+  Return              Return[]
+
+  @@unique([companyId, code])
+  @@index([companyId])
+  @@index([agentId])
+  @@index([phone])
+  @@index([active])
+}
+
+model GeneratedReport {
+  id             String          @id @default(cuid())
+  templateId     String?
+  companyId      String
+  generatedBy    String
+  name           String
+  type           String
+  parameters     String?
+  format         String
+  data           String?
+  fileUrl        String?
+  status         String          @default("completed")
+  createdAt      DateTime        @default(now())
+  ReportTemplate ReportTemplate? @relation(fields: [templateId], references: [id])
+}
+
+model GlobalReceiptTemplate {
+  id                      String                   @id @default(cuid())
+  categoryId              String?
+  name                    String
+  nameAr                  String
+  code                    String                   @unique
+  description             String?
+  descriptionAr           String?
+  templateJson            String
+  previewImage            String?
+  price                   Float                    @default(0)
+  currency                String                   @default("EGP")
+  isFree                  Boolean                  @default(true)
+  templateType            String                   @default("standard")
+  paperSize               String                   @default("A4_THIRD")
+  customWidth             Float?
+  customHeight            Float?
+  downloadCount           Int                      @default(0)
+  installCount            Int                      @default(0)
+  rating                  Float                    @default(0)
+  ratingCount             Int                      @default(0)
+  sortOrder               Int                      @default(0)
+  isFeatured              Boolean                  @default(false)
+  isNew                   Boolean                  @default(true)
+  active                  Boolean                  @default(true)
+  createdBy               String?
+  isSystemTemplate        Boolean                  @default(true)
+  createdAt               DateTime                 @default(now())
+  updatedAt DateTime @updatedAt
+  CompanyReceiptTemplate  CompanyReceiptTemplate[]
+  ReceiptTemplateCategory ReceiptTemplateCategory? @relation(fields: [categoryId], references: [id])
+}
+
+model Governorate {
+  id        String     @id @default(cuid())
+  companyId String
+  name      String
+  nameAr    String?
+  code      String
+  active    Boolean    @default(true)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime @updatedAt
+  City      City[]
+  Customer  Customer[]
+  Company   Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, code])
+}
+
+model Installment {
+  id                  String               @id @default(cuid())
+  contractId          String
+  installmentNumber   Int
+  dueDate             DateTime
+  amount              Float                @default(0)
+  paidAmount          Float                @default(0)
+  remainingAmount     Float                @default(0)
+  status              String               @default("pending")
+  paidDate            DateTime?
+  lateFee             Float                @default(0)
+  notes               String?
+  createdAt           DateTime             @default(now())
+  updatedAt DateTime @updatedAt
+  InstallmentContract InstallmentContract  @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  InstallmentPayment  InstallmentPayment[]
+
+  @@index([contractId])
+  @@index([status])
+  @@index([dueDate])
+}
+
+model InstallmentContract {
+  id               String        @id @default(cuid())
+  invoiceId        String        @unique
+  customerId       String
+  agentId          String?
+  contractNumber   String
+  contractDate     DateTime      @default(now())
+  totalAmount      Float         @default(0)
+  downPayment      Float         @default(0)
+  financedAmount   Float         @default(0)
+  numberOfPayments Int
+  paymentFrequency String
+  interestRate     Float         @default(0)
+  interestAmount   Float         @default(0)
+  startDate        DateTime
+  endDate          DateTime?
+  status           String        @default("active")
+  notes            String?
+  createdAt        DateTime      @default(now())
+  updatedAt DateTime @updatedAt
+  Installment      Installment[]
+  User             User?         @relation(fields: [agentId], references: [id])
+  Customer         Customer      @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  Invoice          Invoice       @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+}
+
+model InstallmentPayment {
+  id            String      @id @default(cuid())
+  installmentId String
+  agentId       String?
+  paymentDate   DateTime    @default(now())
+  amount        Float       @default(0)
+  method        String
+  reference     String?
+  notes         String?
+  createdAt     DateTime    @default(now())
+  User          User?       @relation(fields: [agentId], references: [id])
+  Installment   Installment @relation(fields: [installmentId], references: [id], onDelete: Cascade)
+}
+
+model Inventory {
+  id              String    @id @default(cuid())
+  productId       String
+  warehouseId     String
+  quantity        Float     @default(0)
+  reservedQuantity Float    @default(0)    // الكمية المحجوزة
+  minQuantity     Float     @default(0)
+  maxQuantity     Float?
+  avgCost         Float     @default(0)    // متوسط تكلفة الوحدة
+  totalCost       Float     @default(0)    // إجمالي تكلفة المخزون
+  lastPurchaseDate DateTime?
+  lastPurchaseCost Float?
+  createdAt       DateTime  @default(now())
+  updatedAt DateTime @updatedAt
+  Warehouse       Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  Product         Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, warehouseId])
+}
+
+model InventoryMovement {
+  id              String    @id @default(cuid())
+  productId       String
+  warehouseId     String
+  type            String    // IN, OUT, TRANSFER_IN, TRANSFER_OUT, ADJUSTMENT, RETURN
+  quantity        Float
+  unitCost        Float     @default(0)
+  totalCost       Float     @default(0)
+  referenceType   String?   // PURCHASE_INVOICE, SALES_INVOICE, TRANSFER, RETURN, ADJUSTMENT
+  referenceId     String?
+  notes           String?
+  createdBy       String?
+  createdAt       DateTime  @default(now())
+  Warehouse       Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  Product         Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId, warehouseId])
+  @@index([type])
+  @@index([referenceType, referenceId])
+  @@index([createdAt])
+}
+
+model Invoice {
+  id                  String               @id @default(cuid())
+  companyId           String
+  branchId            String?
+  customerId          String
+  agentId             String?
+  invoiceNumber       String
+  invoiceDate         DateTime             @default(now())
+  dueDate             DateTime?
+  type                String
+  status              String               @default("pending")
+  subtotal            Float                @default(0)
+  discount            Float                @default(0)
+  taxRate             Float                @default(0)
+  taxAmount           Float                @default(0)
+  total               Float                @default(0)
+  paidAmount          Float                @default(0)
+  remainingAmount     Float                @default(0)
+  notes               String?
+  createdAt           DateTime             @default(now())
+  updatedAt DateTime @updatedAt
+  InstallmentContract InstallmentContract?
+  User                User?                @relation(fields: [agentId], references: [id])
+  Branch              Branch?              @relation(fields: [branchId], references: [id])
+  Company             Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  Customer            Customer             @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  InvoiceItem         InvoiceItem[]
+  Payment             Payment[]
+  Return              Return[]
+
+  @@index([companyId])
+  @@index([customerId])
+  @@index([branchId])
+  @@index([agentId])
+  @@index([status])
+  @@index([invoiceDate])
+  @@index([createdAt])
+}
+
+model InvoiceItem {
+  id          String  @id @default(cuid())
+  invoiceId   String
+  productId   String
+  description String?
+  quantity    Float   @default(1)
+  unitPrice   Float   @default(0)
+  discount    Float   @default(0)
+  taxRate     Float   @default(0)
+  taxAmount   Float   @default(0)
+  total       Float   @default(0)
+  notes       String?
+  Product     Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  Invoice     Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id          String    @id @default(cuid())
+  userId      String
+  title       String
+  message     String
+  type        String
+  priority    String    @default("medium")
+  isRead      Boolean   @default(false)
+  link        String?
+  metadata    String?
+  readAt      DateTime?
+  createdAt   DateTime  @default(now())
+  User        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
+}
+
+model OfflineSync {
+  id         String    @id @default(cuid())
+  agentId    String
+  action     String
+  entityType String
+  data       String
+  status     String    @default("pending")
+  syncedAt   DateTime?
+  createdAt  DateTime  @default(now())
+}
+
+model Payment {
+  id            String   @id @default(cuid())
+  companyId     String
+  branchId      String?
+  invoiceId     String?
+  customerId    String
+  agentId       String?
+  paymentNumber String
+  paymentDate   DateTime @default(now())
+  method        String
+  amount        Float    @default(0)
+  reference     String?
+  notes         String?
+  status        String   @default("completed")
+  createdAt     DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  User          User?    @relation(fields: [agentId], references: [id])
+  Branch        Branch?  @relation(fields: [branchId], references: [id])
+  Company       Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  Customer      Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  Invoice       Invoice? @relation(fields: [invoiceId], references: [id])
+
+  @@index([companyId])
+  @@index([customerId])
+  @@index([invoiceId])
+  @@index([paymentDate])
+  @@index([createdAt])
+}
+
+model PaymentTransaction {
+  id              String       @id @default(cuid())
+  subscriptionId  String
+  companyId       String
+  amount          Float
+  currency        String       @default("EGP")
+  status          String       @default("pending")
+  paymentMethod   String
+  referenceNumber String?
+  transactionId   String?
+  paymentUrl      String?
+  qrCode          String?
+  expiresAt       DateTime?
+  notes           String?
+  metadata        String?
+  paidAt          DateTime?
+  createdAt       DateTime     @default(now())
+  updatedAt DateTime @updatedAt
+  Subscription    Subscription @relation(fields: [subscriptionId], references: [id])
+}
+
+model PaymentLink {
+  id             String    @id @default(cuid())
+  customerId     String
+  amount         Float
+  description    String
+  linkCode       String    @unique
+  status         String    @default("active")
+  expiresAt      DateTime
+  installmentId  String?
+  invoiceId      String?
+  paymentMethods String?
+  paidAmount     Float?
+  paymentMethod  String?
+  transactionId  String?
+  paidAt         DateTime?
+  viewedAt       DateTime?
+  viewCount      Int       @default(0)
+  createdAt      DateTime  @default(now())
+  updatedAt DateTime @updatedAt
+  Customer       Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
+  @@index([status])
+  @@index([expiresAt])
+}
+
+model PrintJob {
+  id            String         @id @default(cuid())
+  templateId    String?
+  companyId     String
+  documentType  String
+  documentIds   String
+  printedBy     String
+  copies        Int            @default(1)
+  status        String         @default("pending")
+  printedAt     DateTime?
+  createdAt     DateTime       @default(now())
+  PrintTemplate PrintTemplate? @relation(fields: [templateId], references: [id])
+}
+
+model PrintTemplate {
+  id          String     @id @default(cuid())
+  companyId   String
+  name        String
+  nameAr      String?
+  type        String
+  content     String
+  css         String?
+  paperSize   String     @default("A4")
+  orientation String     @default("portrait")
+  isDefault   Boolean    @default(false)
+  active      Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  updatedAt DateTime @updatedAt
+  PrintJob    PrintJob[]
+  Company     Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+}
+
+model Product {
+  id                  String              @id @default(cuid())
+  companyId           String
+  categoryId          String?
+  supplierId          String?             // المورد الرئيسي للمنتج
+  sku                 String
+  name                String
+  nameAr              String?
+  description         String?
+  unit                String              @default("piece")
+  costPrice           Float               @default(0)
+  sellPrice           Float               @default(0)
+  minPrice            Float?
+  barcode             String?
+  image               String?
+  salesCommission     Float               @default(0)
+  salesCommissionType String              @default("PERCENTAGE")
+  active              Boolean             @default(true)
+  createdAt           DateTime            @default(now())
+  updatedAt DateTime @updatedAt
+  CostLayer           CostLayer[]
+  Inventory           Inventory[]
+  InventoryMovement   InventoryMovement[]
+  InventoryTransferItem InventoryTransferItem[]
+  InventoryValuation InventoryValuation[]
+  InvoiceItem         InvoiceItem[]
+  ProductCategory     ProductCategory?    @relation(fields: [categoryId], references: [id])
+  Company             Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  PurchaseInvoiceItem PurchaseInvoiceItem[]
+  PurchaseReturnItem  PurchaseReturnItem[]
+  ReturnItem          ReturnItem[]
+  Supplier            Supplier?           @relation("SupplierProducts", fields: [supplierId], references: [id])
+
+  @@unique([companyId, sku])
+  @@index([companyId])
+  @@index([categoryId])
+  @@index([active])
+}
+
+model ProductCategory {
+  id                    String            @id @default(cuid())
+  companyId             String
+  name                  String
+  nameAr                String?
+  code                  String
+  parentId              String?
+  active                Boolean           @default(true)
+  createdAt             DateTime          @default(now())
+  updatedAt DateTime @updatedAt
+  Product               Product[]
+  ProductCategory       ProductCategory?  @relation("ProductCategoryToProductCategory", fields: [parentId], references: [id])
+  other_ProductCategory ProductCategory[] @relation("ProductCategoryToProductCategory")
+  Company               Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, code])
+}
+
+model ReceiptPrintLog {
+  id                     String                  @id @default(cuid())
+  companyId              String
+  branchId               String?
+  templateId             String?
+  installmentId          String
+  invoiceId              String?
+  customerId             String
+  contractNumber         String?
+  installmentNumber      Int?
+  printedBy              String
+  printedAt              DateTime                @default(now())
+  isReprint              Boolean                 @default(false)
+  originalPrintId        String?
+  printCount             Int                     @default(1)
+  printMethod            String                  @default("PRINT")
+  notes                  String?
+  createdAt              DateTime                @default(now())
+  CompanyReceiptTemplate CompanyReceiptTemplate? @relation(fields: [templateId], references: [id])
+
+  @@index([companyId, printedAt])
+  @@index([companyId, installmentId])
+}
+
+model ReceiptTemplateCategory {
+  id                    String                  @id @default(cuid())
+  name                  String
+  nameAr                String
+  code                  String                  @unique
+  icon                  String?
+  sortOrder             Int                     @default(0)
+  active                Boolean                 @default(true)
+  createdAt             DateTime                @default(now())
+  updatedAt DateTime @updatedAt
+  GlobalReceiptTemplate GlobalReceiptTemplate[]
+}
+
+model RegistrationRequest {
+  id            String    @id @default(cuid())
+  companyName   String
+  companyNameAr String?
+  email         String    @unique
+  phone         String
+  password      String
+  planId        String?
+  contactName   String?
+  city          String?
+  status        String    @default("pending")
+  notes         String?
+  companyId     String?
+  approvedAt    DateTime?
+  approvedBy    String?
+  createdAt     DateTime  @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ReportTemplate {
+  id              String            @id @default(cuid())
+  companyId       String
+  name            String
+  nameAr          String?
+  type            String
+  config          String
+  filters         String?
+  columns         String?
+  isDefault       Boolean           @default(false)
+  active          Boolean           @default(true)
+  createdAt       DateTime          @default(now())
+  updatedAt DateTime @updatedAt
+  GeneratedReport GeneratedReport[]
+  Company         Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+}
+
+model Return {
+  id           String       @id @default(cuid())
+  companyId    String
+  branchId     String?
+  invoiceId    String?
+  customerId   String
+  agentId      String?
+  returnNumber String
+  returnDate   DateTime     @default(now())
+  type         String
+  reason       String?
+  status       String       @default("pending")
+  subtotal     Float        @default(0)
+  taxAmount    Float        @default(0)
+  total        Float        @default(0)
+  notes        String?
+  createdAt    DateTime     @default(now())
+  updatedAt DateTime @updatedAt
+  User         User?        @relation(fields: [agentId], references: [id])
+  Branch       Branch?      @relation(fields: [branchId], references: [id])
+  Company      Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  Customer     Customer     @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  Invoice      Invoice?     @relation(fields: [invoiceId], references: [id])
+  ReturnItem   ReturnItem[]
+}
+
+model ReturnItem {
+  id            String  @id @default(cuid())
+  returnId      String
+  productId     String
+  invoiceItemId String?
+  description   String?
+  quantity      Float   @default(1)
+  unitPrice     Float   @default(0)
+  taxAmount     Float   @default(0)
+  total         Float   @default(0)
+  restocked     Boolean @default(false)
+  Product       Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  Return        Return  @relation(fields: [returnId], references: [id], onDelete: Cascade)
+}
+
+model Subscription {
+  id                 String               @id @default(cuid())
+  companyId          String               @unique
+  planId             String
+  status             String               @default("active")
+  billingCycle       String               @default("MONTHLY")
+  startDate          DateTime
+  endDate            DateTime
+  trialEnd           DateTime?
+  cancelledAt        DateTime?
+  originalPrice      Float                @default(0)
+  discountPercent    Float                @default(0)
+  finalPrice         Float                @default(0)
+  currency           String               @default("EGP")
+  couponId           String?
+  autoRenew          Boolean              @default(true)
+  createdAt          DateTime             @default(now())
+  updatedAt DateTime @updatedAt
+  Company            Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  PaymentTransaction PaymentTransaction[]
+  SubscriptionPlan   SubscriptionPlan     @relation(fields: [planId], references: [id])
+  FeatureUsage       FeatureUsage[]
+}
+
+// استخدام الميزات - لتتبع استهلاك كل ميزة
+model FeatureUsage {
+  id             String     @id @default(cuid())
+  subscriptionId String
+  featureKey     String
+  usedValue      Int        @default(0)  // القيمة المستخدمة
+  limitValue     Int?       // الحد الأقصى (نسخة من الخطة)
+  resetDate      DateTime?  // تاريخ إعادة التعيين
+  lastUpdated    DateTime   @default(now())
+  Subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@unique([subscriptionId, featureKey])
+  @@index([subscriptionId])
+}
+
+model SubscriptionPlan {
+  id            String         @id @default(cuid())
+  name          String
+  nameAr        String
+  code          String         @unique
+  description   String?
+  descriptionAr String?
+  price         Float          @default(0)
+  currency      String         @default("EGP")
+  billingCycle  String         @default("MONTHLY")
+  trialDays     Int            @default(0)
+  sortOrder     Int            @default(0)
+  isPopular     Boolean        @default(false)
+  isDefault     Boolean        @default(false)
+  active        Boolean        @default(true)
+  createdAt     DateTime       @default(now())
+  updatedAt DateTime @updatedAt
+  Subscription  Subscription[]
+  PlanFeature   PlanFeature[]
+}
+
+// ميزات الخطة - كل ميزة كبند منفصل
+model PlanFeature {
+  id               String            @id @default(cuid())
+  planId           String
+  featureKey       String            // مفتاح الميزة الفريد
+  featureName      String            // اسم الميزة بالإنجليزية
+  featureNameAr    String            // اسم الميزة بالعربية
+  category         String            // فئة الميزة
+  categoryAr       String            // فئة الميزة بالعربية
+  enabled          Boolean           @default(false)  // مفعلة أو معطلة
+  limitValue       Int?              // قيمة الحد (عدد، حجم، إلخ)
+  limitUnit        String?           // وحدة الحد (branches, users, mb, gb, etc.)
+  price            Float?            // سعر إضافي للميزة
+  description      String?           // وصف الميزة
+  descriptionAr    String?           // وصف الميزة بالعربية
+  icon             String?           // أيقونة الميزة
+  sortOrder        Int               @default(0)
+  createdAt        DateTime          @default(now())
+  updatedAt DateTime @updatedAt
+  SubscriptionPlan SubscriptionPlan  @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@unique([planId, featureKey])
+  @@index([planId])
+  @@index([category])
+}
+
+// فئات الميزات
+enum FeatureCategory {
+  BRANCHES_MANAGEMENT    // إدارة الفروع
+  USERS_MANAGEMENT       // إدارة المستخدمين
+  CUSTOMERS_MANAGEMENT   // إدارة العملاء
+  PRODUCTS_MANAGEMENT    // إدارة المنتجات
+  INVENTORY_MANAGEMENT   // إدارة المخزون
+  INVOICES               // الفواتير
+  INSTALLMENTS           // الأقساط
+  PAYMENTS               // المدفوعات
+  PAYMENT_GATEWAYS       // بوابات الدفع
+  REPORTS                // التقارير
+  ANALYTICS              // التحليلات
+  INTEGRATIONS           // التكاملات
+  API_ACCESS             // الوصول للـ API
+  SUPPORT                // الدعم
+  STORAGE                // التخزين
+  BACKUP                 // النسخ الاحتياطي
+  NOTIFICATIONS          // الإشعارات
+  SECURITY               // الأمان
+  CUSTOMIZATION          // التخصيص
+  MOBILE_APP             // التطبيق المحمول
+}
+
+// قالب الميزات الافتراضية
+model FeatureTemplate {
+  id             String   @id @default(cuid())
+  featureKey     String   @unique
+  featureName    String
+  featureNameAr  String
+  category       String
+  categoryAr     String
+  description    String?
+  descriptionAr  String?
+  icon           String?
+  defaultLimit   Int?
+  limitUnit      String?
+  defaultPrice   Float?
+  isPremium      Boolean  @default(false)
+  sortOrder      Int      @default(0)
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model SystemSetting {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model TemplateRating {
+  id               String   @id @default(cuid())
+  globalTemplateId String
+  companyId        String
+  userId           String
+  rating           Int
+  review           String?
+  createdAt        DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([globalTemplateId, companyId, userId])
+}
+
+model User {
+  id                    String                @id @default(cuid())
+  companyId             String?
+  branchId              String?
+  email                 String                @unique
+  password              String
+  name                  String
+  nameAr                String?
+  phone                 String?
+  avatar                String?
+  role                  String
+  active                Boolean               @default(true)
+  twoFactorSecret       String?
+  twoFactorEnabled      Boolean               @default(false)
+  twoFactorBackupCodes  String?
+  lastLoginAt           DateTime?
+  lastLoginIp           String?
+  failedLoginAttempts   Int                   @default(0)
+  lockedUntil           DateTime?
+  createdAt             DateTime              @default(now())
+  updatedAt DateTime @updatedAt
+  AgentCommission       AgentCommission[]
+  AgentLocation         AgentLocation[]
+  AuditLog              AuditLog[]
+  CommissionPolicy      CommissionPolicy[]
+  Customer              Customer[]
+  InstallmentContract   InstallmentContract[]
+  InstallmentPayment    InstallmentPayment[]
+  Invoice               Invoice[]
+  Payment               Payment[]
+  Return                Return[]
+  Notification          Notification[]
+  Branch                Branch?               @relation(fields: [branchId], references: [id])
+  Company               Company?              @relation(fields: [companyId], references: [id])
+  Zone                  Zone[]                @relation("ZoneAgents")
+  SuperAdminImpersonations ImpersonationSession[] @relation("SuperAdminImpersonations")
+}
+
+model Warehouse {
+  id                String              @id @default(cuid())
+  companyId         String
+  branchId          String?
+  name              String
+  nameAr            String?
+  code              String
+  address           String?
+  isMain            Boolean             @default(false)
+  active            Boolean             @default(true)
+  createdAt         DateTime            @default(now())
+  updatedAt DateTime @updatedAt
+  Branch            Branch?             @relation(fields: [branchId], references: [id])
+  Company           Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  CostLayer         CostLayer[]
+  FromTransfers     InventoryTransfer[] @relation("TransferFromWarehouse")
+  ToTransfers       InventoryTransfer[] @relation("TransferToWarehouse")
+  Inventory         Inventory[]
+  InventoryMovement InventoryMovement[]
+  InventoryValuation InventoryValuation[]
+  PurchaseInvoice   PurchaseInvoice[]
+  PurchaseReturn    PurchaseReturn[]
+
+  @@unique([companyId, code])
+}
+
+model Zone {
+  id          String     @id @default(cuid())
+  companyId   String
+  branchId    String?
+  name        String
+  nameAr      String?
+  code        String
+  description String?
+  boundary    String?
+  active      Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  updatedAt DateTime @updatedAt
+  Customer    Customer[]
+  Branch      Branch?    @relation(fields: [branchId], references: [id])
+  Company     Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  User        User[]     @relation("ZoneAgents")
+
+  @@unique([companyId, code])
+}
+
+// =====================================================
+// نماذج المشتريات والمخازن - Procurement & Inventory
+// =====================================================
+
+// الموردين
+model Supplier {
+  id                String              @id @default(cuid())
+  companyId         String
+  supplierCode      String
+  name              String
+  nameAr            String?
+  phone             String?
+  phone2            String?
+  email             String?
+  address           String?
+  city              String?
+  taxNumber         String?
+  commercialReg     String?
+  creditLimit       Float               @default(0)
+  currentBalance    Float               @default(0)        // الرصيد الحالي
+  balanceType       String              @default("CREDIT") // CREDIT=دائن, DEBIT=مدين
+  paymentTerms      Int                 @default(0)        // شروط السداد بالأيام
+  currency          String              @default("EGP")
+  notes             String?
+  active            Boolean             @default(true)
+  createdAt         DateTime            @default(now())
+  updatedAt DateTime @updatedAt
+  Company           Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  SupplierTransaction SupplierTransaction[]
+  SupplierPayment      SupplierPayment[]
+  PurchaseInvoice      PurchaseInvoice[]
+  PurchaseReturn       PurchaseReturn[]
+  Product              Product[]          @relation("SupplierProducts")
+
+  @@unique([companyId, supplierCode])
+  @@index([companyId])
+  @@index([active])
+}
+
+// حركات رصيد المورد
+model SupplierTransaction {
+  id               String    @id @default(cuid())
+  companyId        String
+  supplierId       String
+  transactionType  String    // OPENING, INVOICE, RETURN, PAYMENT, ADJUSTMENT
+  referenceType    String?   // PURCHASE_INVOICE, PURCHASE_RETURN, SUPPLIER_PAYMENT
+  referenceId      String?
+  transactionNumber String
+  transactionDate  DateTime  @default(now())
+  debit            Float     @default(0)  // مدين (يزيد رصيد الشركة للمورد)
+  credit           Float     @default(0)  // دائن (ينقص رصيد الشركة للمورد)
+  balance          Float     @default(0)  // الرصيد بعد الحركة
+  notes            String?
+  createdAt        DateTime  @default(now())
+  updatedAt DateTime @updatedAt
+  Supplier         Supplier  @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  Company          Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([supplierId])
+  @@index([companyId, transactionDate])
+  @@index([referenceType, referenceId])
+}
+
+// دفعات الموردين
+model SupplierPayment {
+  id               String    @id @default(cuid())
+  companyId        String
+  branchId         String?
+  supplierId       String
+  paymentNumber    String
+  paymentDate      DateTime  @default(now())
+  amount           Float     @default(0)
+  method           String    // CASH, BANK_TRANSFER, CHECK, etc.
+  bankName         String?
+  checkNumber      String?
+  checkDate        DateTime?
+  reference        String?
+  status           String    @default("completed") // pending, completed, cancelled, bounced
+  notes            String?
+  createdAt        DateTime  @default(now())
+  updatedAt DateTime @updatedAt
+  Supplier         Supplier  @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  Company          Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  Branch           Branch?   @relation(fields: [branchId], references: [id])
+
+  @@index([supplierId])
+  @@index([companyId, paymentDate])
+  @@index([status])
+}
+
+// فواتير المشتريات
+model PurchaseInvoice {
+  id                  String                 @id @default(cuid())
+  companyId           String
+  branchId            String?
+  warehouseId         String
+  supplierId          String
+  invoiceNumber       String
+  supplierInvoiceNumber String?              // رقم فاتورة المورد
+  invoiceDate         DateTime               @default(now())
+  dueDate             DateTime?
+  status              String                 @default("draft") // draft, pending, approved, cancelled, partial, paid
+  paymentStatus       String                 @default("unpaid") // unpaid, partial, paid
+  subtotal            Float                  @default(0)
+  discountType        String                 @default("PERCENTAGE") // PERCENTAGE, FIXED
+  discountValue       Float                  @default(0)
+  discount            Float                  @default(0)
+  taxRate             Float                  @default(0)
+  taxAmount           Float                  @default(0)
+  additions           Float                  @default(0)    // مصاريف إضافية
+  deductions          Float                  @default(0)    // خصومات
+  total               Float                  @default(0)
+  paidAmount          Float                  @default(0)
+  remainingAmount     Float                  @default(0)
+  notes               String?
+  approvedBy          String?
+  approvedAt          DateTime?
+  createdBy           String?
+  createdAt           DateTime               @default(now())
+  updatedAt DateTime @updatedAt
+  Company             Company                @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  Branch              Branch?                @relation(fields: [branchId], references: [id])
+  Warehouse           Warehouse              @relation(fields: [warehouseId], references: [id])
+  Supplier            Supplier               @relation(fields: [supplierId], references: [id])
+  CostLayer           CostLayer[]
+  PurchaseInvoiceItem PurchaseInvoiceItem[]
+  PurchaseReturn      PurchaseReturn[]
+
+  @@index([companyId])
+  @@index([supplierId])
+  @@index([warehouseId])
+  @@index([status])
+  @@index([invoiceDate])
+}
+
+// أصناف فاتورة المشتريات
+model PurchaseInvoiceItem {
+  id                String          @id @default(cuid())
+  purchaseInvoiceId String
+  productId         String
+  description       String?
+  quantity          Float           @default(1)
+  unitPrice         Float           @default(0)
+  discount          Float           @default(0)
+  taxRate           Float           @default(0)
+  taxAmount         Float           @default(0)
+  total             Float           @default(0)
+  notes             String?
+  createdAt         DateTime        @default(now())
+  updatedAt DateTime @updatedAt
+  PurchaseInvoice   PurchaseInvoice @relation(fields: [purchaseInvoiceId], references: [id], onDelete: Cascade)
+  Product           Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  PurchaseReturnItem PurchaseReturnItem[]
+
+  @@index([purchaseInvoiceId])
+  @@index([productId])
+}
+
+// مرتجعات المشتريات
+model PurchaseReturn {
+  id                  String                @id @default(cuid())
+  companyId           String
+  branchId            String?
+  warehouseId         String
+  supplierId          String
+  purchaseInvoiceId   String?
+  returnNumber        String
+  returnDate          DateTime              @default(now())
+  status              String                @default("draft") // draft, pending, approved, cancelled
+  reason              String?
+  subtotal            Float                 @default(0)
+  taxAmount           Float                 @default(0)
+  total               Float                 @default(0)
+  notes               String?
+  approvedBy          String?
+  approvedAt          DateTime?
+  createdBy           String?
+  createdAt           DateTime              @default(now())
+  updatedAt DateTime @updatedAt
+  Company             Company               @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  Branch              Branch?               @relation(fields: [branchId], references: [id])
+  Warehouse           Warehouse             @relation(fields: [warehouseId], references: [id])
+  Supplier            Supplier              @relation(fields: [supplierId], references: [id])
+  PurchaseInvoice     PurchaseInvoice?      @relation(fields: [purchaseInvoiceId], references: [id])
+  PurchaseReturnItem  PurchaseReturnItem[]
+
+  @@index([companyId])
+  @@index([supplierId])
+  @@index([purchaseInvoiceId])
+  @@index([status])
+  @@index([returnDate])
+}
+
+// أصناف مرتجع المشتريات
+model PurchaseReturnItem {
+  id                    String          @id @default(cuid())
+  purchaseReturnId      String
+  purchaseInvoiceItemId String?
+  productId             String
+  description           String?
+  quantity              Float           @default(1)
+  unitPrice             Float           @default(0)
+  taxAmount             Float           @default(0)
+  total                 Float           @default(0)
+  restocked             Boolean         @default(false)
+  notes                 String?
+  createdAt             DateTime        @default(now())
+  updatedAt DateTime @updatedAt
+  PurchaseReturn        PurchaseReturn  @relation(fields: [purchaseReturnId], references: [id], onDelete: Cascade)
+  PurchaseInvoiceItem   PurchaseInvoiceItem? @relation(fields: [purchaseInvoiceItemId], references: [id])
+  Product               Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([purchaseReturnId])
+  @@index([productId])
+}
+
+// التحويلات بين المخازن
+model InventoryTransfer {
+  id                  String                  @id @default(cuid())
+  companyId           String
+  fromBranchId        String?
+  toBranchId          String?
+  fromWarehouseId     String
+  toWarehouseId       String
+  transferNumber      String
+  transferDate        DateTime                @default(now())
+  transferType        String                  @default("INTERNAL") // INTERNAL, CROSS_BRANCH
+  status              String                  @default("draft") // draft, pending, approved, rejected, completed, cancelled
+  reason              String?
+  subtotal            Float                   @default(0)
+  totalItems          Int                     @default(0)
+  notes               String?
+  requestedBy         String?
+  approvedBy          String?
+  approvedAt          DateTime?
+  receivedBy          String?
+  receivedAt          DateTime?
+  createdBy           String?
+  createdAt           DateTime                @default(now())
+  updatedAt DateTime @updatedAt
+  Company             Company                 @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  FromBranch          Branch?                 @relation("TransferFromBranch", fields: [fromBranchId], references: [id])
+  ToBranch            Branch?                 @relation("TransferToBranch", fields: [toBranchId], references: [id])
+  FromWarehouse       Warehouse               @relation("TransferFromWarehouse", fields: [fromWarehouseId], references: [id])
+  ToWarehouse         Warehouse               @relation("TransferToWarehouse", fields: [toWarehouseId], references: [id])
+  InventoryTransferItem InventoryTransferItem[]
+
+  @@index([companyId])
+  @@index([fromWarehouseId])
+  @@index([toWarehouseId])
+  @@index([status])
+  @@index([transferDate])
+}
+
+// أصناف التحويل
+model InventoryTransferItem {
+  id                  String            @id @default(cuid())
+  transferId          String
+  productId           String
+  description         String?
+  quantity            Float             @default(1)
+  unitCost            Float             @default(0)
+  total               Float             @default(0)
+  notes               String?
+  createdAt           DateTime          @default(now())
+  updatedAt DateTime @updatedAt
+  InventoryTransfer   InventoryTransfer @relation(fields: [transferId], references: [id], onDelete: Cascade)
+  Product             Product           @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([transferId])
+  @@index([productId])
+}
+
+// طبقات التكلفة (لحساب FIFO والمتوسط المرجح)
+model CostLayer {
+  id                String    @id @default(cuid())
+  companyId         String
+  productId         String
+  warehouseId       String
+  purchaseInvoiceId String?
+  layerDate         DateTime  @default(now())
+  quantity          Float     @default(0)
+  remainingQuantity Float     @default(0)
+  unitCost          Float     @default(0)
+  totalCost         Float     @default(0)
+  isExpired         Boolean   @default(false)
+  createdAt         DateTime  @default(now())
+  updatedAt DateTime @updatedAt
+  Company           Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  Product           Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  Warehouse         Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  PurchaseInvoice   PurchaseInvoice? @relation(fields: [purchaseInvoiceId], references: [id])
+
+  @@index([productId, warehouseId])
+  @@index([layerDate])
+}
+
+// تقييم المخزون
+model InventoryValuation {
+  id                String    @id @default(cuid())
+  companyId         String
+  warehouseId       String?
+  productId         String
+  valuationDate     DateTime  @default(now())
+  quantity          Float     @default(0)
+  unitCost          Float     @default(0)
+  totalValue        Float     @default(0)
+  valuationMethod   String    @default("WEIGHTED_AVERAGE") // FIFO, WEIGHTED_AVERAGE
+  createdAt         DateTime  @default(now())
+  updatedAt DateTime @updatedAt
+  Company           Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  Product           Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  Warehouse         Warehouse? @relation(fields: [warehouseId], references: [id])
+
+  @@index([companyId, valuationDate])
+  @@index([productId])
+}
+
+// =====================================================
+// جلسات الدخول المتخفي - Impersonation Sessions
+// =====================================================
+
+model ImpersonationSession {
+  id              String   @id @default(cuid())
+  superAdminId    String
+  targetCompanyId String
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  expiresAt       DateTime @default(now())
+  endedAt         DateTime?
+  
+  SuperAdmin      User     @relation("SuperAdminImpersonations", fields: [superAdminId], references: [id], onDelete: Cascade)
+  TargetCompany   Company  @relation("ImpersonationTargetCompany", fields: [targetCompanyId], references: [id], onDelete: Cascade)
+
+  @@index([superAdminId])
+  @@index([targetCompanyId])
+  @@index([isActive])
+}
