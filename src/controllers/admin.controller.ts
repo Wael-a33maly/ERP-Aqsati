@@ -28,7 +28,9 @@ async function checkSuperAdmin(request?: NextRequest) {
 
   if (userCookie) {
     try {
-      const cookieUser = JSON.parse(decodeURIComponent(userCookie.value))
+      const decodedValue = decodeURIComponent(userCookie.value)
+      console.log('[checkSuperAdmin] Decoded cookie value length:', decodedValue.length)
+      const cookieUser = JSON.parse(decodedValue)
       console.log('[checkSuperAdmin] Cookie user role:', cookieUser.role)
       if (cookieUser.role === 'SUPER_ADMIN') {
         console.log('[checkSuperAdmin] Found SUPER_ADMIN from erp_user cookie')
@@ -42,11 +44,15 @@ async function checkSuperAdmin(request?: NextRequest) {
   // ثالثاً: التحقق من Authorization header (للتوافقية)
   if (request) {
     const authHeader = request.headers.get('authorization')
+    console.log('[checkSuperAdmin] Authorization header:', authHeader ? `exists (${authHeader.substring(0, 20)}...)` : 'not found')
+    
     if (authHeader && authHeader.startsWith('Bearer ')) {
       const token = authHeader.substring(7)
+      console.log('[checkSuperAdmin] Token length:', token.length)
       try {
         const { verifyToken } = await import('@/lib/auth')
         const payload = verifyToken(token)
+        console.log('[checkSuperAdmin] Token payload:', payload ? { userId: payload.userId, email: payload.email, role: payload.role } : null)
         if (payload && payload.role === 'SUPER_ADMIN') {
           console.log('[checkSuperAdmin] Found SUPER_ADMIN from Authorization header')
           return payload as any
@@ -55,6 +61,8 @@ async function checkSuperAdmin(request?: NextRequest) {
         console.log('[checkSuperAdmin] Error verifying token from header:', e)
       }
     }
+  } else {
+    console.log('[checkSuperAdmin] No request object provided')
   }
 
   console.log('[checkSuperAdmin] No SUPER_ADMIN found, returning null')

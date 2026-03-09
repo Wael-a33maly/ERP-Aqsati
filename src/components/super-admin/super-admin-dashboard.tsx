@@ -116,7 +116,11 @@ export default function SuperAdminDashboard({ user, onImpersonate }: SuperAdminD
     try {
       // الحصول على الـ token من localStorage
       const userStr = localStorage.getItem('erp_user')
-      const token = userStr ? JSON.parse(userStr).token : null
+      console.log('[SuperAdminDashboard] userStr:', userStr ? 'exists' : 'not found')
+      const userData = userStr ? JSON.parse(userStr) : null
+      const token = userData?.token
+      
+      console.log('[SuperAdminDashboard] token:', token ? `exists (${token.substring(0, 20)}...)` : 'not found')
       
       // إعداد headers
       const headers: Record<string, string> = {
@@ -126,10 +130,19 @@ export default function SuperAdminDashboard({ user, onImpersonate }: SuperAdminD
       // إضافة Authorization header إذا كان موجود
       if (token) {
         headers['Authorization'] = `Bearer ${token}`
+        console.log('[SuperAdminDashboard] Authorization header set')
+      } else {
+        console.log('[SuperAdminDashboard] No token, Authorization header not set')
+      }
+      
+      // إعداد الـ fetch options مع credentials لإرسال الـ cookies
+      const fetchOptions: RequestInit = {
+        headers,
+        credentials: 'include' // مهم: إرسال الـ cookies مع الـ request
       }
       
       if (activeTab === 'dashboard' || activeTab === 'companies') {
-        const response = await fetch('/api/admin/stats', { headers })
+        const response = await fetch('/api/admin/stats', fetchOptions)
         const result = await response.json()
         if (result.success) {
           setStats(result.data.stats)
@@ -137,14 +150,14 @@ export default function SuperAdminDashboard({ user, onImpersonate }: SuperAdminD
         }
       }
       if (activeTab === 'collections') {
-        const response = await fetch(`/api/admin/collections?period=${periodFilter}`, { headers })
+        const response = await fetch(`/api/admin/collections?period=${periodFilter}`, fetchOptions)
         const result = await response.json()
         if (result.success) {
           setCollections(result.data)
         }
       }
       if (activeTab === 'backup') {
-        const response = await fetch('/api/admin/backup?action=list', { headers })
+        const response = await fetch('/api/admin/backup?action=list', fetchOptions)
         const result = await response.json()
         if (result.success) {
           setBackups(result.backups)
