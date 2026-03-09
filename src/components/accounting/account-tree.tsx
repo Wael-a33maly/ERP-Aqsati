@@ -510,14 +510,14 @@ export default function AccountTreeManagement() {
             <div>
               <label className="text-sm font-medium">الحساب الأب</label>
               <Select
-                value={formData.parentId}
-                onValueChange={(value) => setFormData({ ...formData, parentId: value })}
+                value={formData.parentId || 'NO_PARENT'}
+                onValueChange={(value) => setFormData({ ...formData, parentId: value === 'NO_PARENT' ? '' : value })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="اختر الحساب الأب (اختياري)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">بدون أب (حساب رئيسي)</SelectItem>
+                  <SelectItem value="NO_PARENT">بدون أب (حساب رئيسي)</SelectItem>
                   {accounts.map(account => (
                     <SelectItem key={account.id} value={account.id}>
                       {account.code} - {account.name}
