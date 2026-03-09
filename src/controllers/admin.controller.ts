@@ -9,30 +9,55 @@ import { getCurrentUser } from '@/lib/auth'
 import { cookies } from 'next/headers'
 
 // التحقق من صلاحيات السوبر أدمن
-async function checkSuperAdmin() {
-  // أولاً: التحقق من getCurrentUser (من auth-token cookie)
+async function checkSuperAdmin(request?: NextRequest) {
+  console.log('[checkSuperAdmin] Starting check...')
+  
+  // أولاً: التحقق من getCurrentUser (من erp_auth_token cookie)
   const user = await getCurrentUser()
+  console.log('[checkSuperAdmin] getCurrentUser result:', user ? { id: user.id, email: user.email, role: user.role } : null)
+  
   if (user && user.role === 'SUPER_ADMIN') {
+    console.log('[checkSuperAdmin] Found SUPER_ADMIN from auth token')
     return user
   }
 
-  // ثانياً: التحقق من erp_user cookie (للتوافقية)
+  // ثانياً: التحقق من erp_user cookie (للتوافقية مع localStorage login)
   const cookieStore = await cookies()
   const userCookie = cookieStore.get('erp_user')
+  console.log('[checkSuperAdmin] erp_user cookie:', userCookie ? 'exists' : 'not found')
 
-  if (!userCookie) {
-    return null
-  }
-
-  try {
-    const cookieUser = JSON.parse(userCookie.value)
-    if (cookieUser.role === 'SUPER_ADMIN') {
-      return cookieUser
+  if (userCookie) {
+    try {
+      const cookieUser = JSON.parse(decodeURIComponent(userCookie.value))
+      console.log('[checkSuperAdmin] Cookie user role:', cookieUser.role)
+      if (cookieUser.role === 'SUPER_ADMIN') {
+        console.log('[checkSuperAdmin] Found SUPER_ADMIN from erp_user cookie')
+        return cookieUser
+      }
+    } catch (e) {
+      console.log('[checkSuperAdmin] Error parsing erp_user cookie:', e)
     }
-  } catch {
-    return null
   }
 
+  // ثالثاً: التحقق من Authorization header (للتوافقية)
+  if (request) {
+    const authHeader = request.headers.get('authorization')
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.substring(7)
+      try {
+        const { verifyToken } = await import('@/lib/auth')
+        const payload = verifyToken(token)
+        if (payload && payload.role === 'SUPER_ADMIN') {
+          console.log('[checkSuperAdmin] Found SUPER_ADMIN from Authorization header')
+          return payload as any
+        }
+      } catch (e) {
+        console.log('[checkSuperAdmin] Error verifying token from header:', e)
+      }
+    }
+  }
+
+  console.log('[checkSuperAdmin] No SUPER_ADMIN found, returning null')
   return null
 }
 
@@ -40,7 +65,7 @@ export const adminController = {
   // === Stats ===
   async getStats(request: NextRequest) {
     try {
-      const user = await checkSuperAdmin()
+      const user = await checkSuperAdmin(request)
       if (!user) {
         return NextResponse.json({ success: false, error: 'غير مصرح' }, { status: 401 })
       }
@@ -56,7 +81,7 @@ export const adminController = {
   // === Payment Gateways ===
   async getPaymentGateways(request: NextRequest) {
     try {
-      const user = await checkSuperAdmin()
+      const user = await checkSuperAdmin(request)
       if (!user) {
         return NextResponse.json({ success: false, error: 'غير مصرح' }, { status: 401 })
       }
@@ -74,7 +99,7 @@ export const adminController = {
 
   async createPaymentGateway(request: NextRequest) {
     try {
-      const user = await checkSuperAdmin()
+      const user = await checkSuperAdmin(request)
       if (!user) {
         return NextResponse.json({ success: false, error: 'غير مصرح' }, { status: 401 })
       }
@@ -95,7 +120,7 @@ export const adminController = {
 
   async updatePaymentGateway(request: NextRequest) {
     try {
-      const user = await checkSuperAdmin()
+      const user = await checkSuperAdmin(request)
       if (!user) {
         return NextResponse.json({ success: false, error: 'غير مصرح' }, { status: 401 })
       }
@@ -116,7 +141,7 @@ export const adminController = {
 
   async togglePaymentGateway(request: NextRequest) {
     try {
-      const user = await checkSuperAdmin()
+      const user = await checkSuperAdmin(request)
       if (!user) {
         return NextResponse.json({ success: false, error: 'غير مصرح' }, { status: 401 })
       }
@@ -143,7 +168,7 @@ export const adminController = {
 
   async deletePaymentGateway(request: NextRequest) {
     try {
-      const user = await checkSuperAdmin()
+      const user = await checkSuperAdmin(request)
       if (!user) {
         return NextResponse.json({ success: false, error: 'غير مصرح' }, { status: 401 })
       }
@@ -170,7 +195,7 @@ export const adminController = {
   // === Collections ===
   async getCollections(request: NextRequest) {
     try {
-      const user = await checkSuperAdmin()
+      const user = await checkSuperAdmin(request)
       if (!user) {
         return NextResponse.json({ success: false, error: 'غير مصرح' }, { status: 401 })
       }
@@ -189,7 +214,7 @@ export const adminController = {
   // === Backup ===
   async getBackups(request: NextRequest) {
     try {
-      const user = await checkSuperAdmin()
+      const user = await checkSuperAdmin(request)
       if (!user) {
         return NextResponse.json({ success: false, error: 'غير مصرح' }, { status: 401 })
       }
@@ -226,7 +251,7 @@ export const adminController = {
 
   async createBackup(request: NextRequest) {
     try {
-      const user = await checkSuperAdmin()
+      const user = await checkSuperAdmin(request)
       if (!user) {
         return NextResponse.json({ success: false, error: 'غير مصرح' }, { status: 401 })
       }
@@ -248,7 +273,7 @@ export const adminController = {
 
   async deleteBackup(request: NextRequest) {
     try {
-      const user = await checkSuperAdmin()
+      const user = await checkSuperAdmin(request)
       if (!user) {
         return NextResponse.json({ success: false, error: 'غير مصرح' }, { status: 401 })
       }
@@ -271,7 +296,7 @@ export const adminController = {
   // === Restore ===
   async restoreBackup(request: NextRequest) {
     try {
-      const user = await checkSuperAdmin()
+      const user = await checkSuperAdmin(request)
       if (!user) {
         return NextResponse.json({ success: false, error: 'غير مصرح' }, { status: 401 })
       }
@@ -304,7 +329,7 @@ export const adminController = {
   // === Danger Zone ===
   async deleteAllData(request: NextRequest) {
     try {
-      const user = await checkSuperAdmin()
+      const user = await checkSuperAdmin(request)
       if (!user) {
         return NextResponse.json({ success: false, error: 'غير مصرح' }, { status: 401 })
       }
@@ -329,7 +354,7 @@ export const adminController = {
   // === Impersonate ===
   async startImpersonate(request: NextRequest) {
     try {
-      const user = await checkSuperAdmin()
+      const user = await checkSuperAdmin(request)
       if (!user) {
         return NextResponse.json({ success: false, error: 'غير مصرح' }, { status: 401 })
       }

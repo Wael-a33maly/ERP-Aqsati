@@ -11301,8 +11301,13 @@ function LoginPage({ onLogin, onRegister }: any) {
       
       if (data.success && data.data) {
         const user = data.data.user || data.data
-        localStorage.setItem('erp_user', JSON.stringify(user))
-        onLogin(user)
+        const token = data.data.token
+        // حفظ في localStorage مع الـ token
+        const userWithToken = { ...user, token }
+        localStorage.setItem('erp_user', JSON.stringify(userWithToken))
+        // حفظ في cookie للسماح للـ server بقراءته
+        document.cookie = `erp_user=${encodeURIComponent(JSON.stringify(userWithToken))}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`
+        onLogin(userWithToken)
         toast.success('مرحباً بك!')
       } else {
         setError(data.error || 'فشل تسجيل الدخول')

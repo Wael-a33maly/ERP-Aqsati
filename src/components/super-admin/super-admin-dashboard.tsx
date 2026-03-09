@@ -114,8 +114,22 @@ export default function SuperAdminDashboard({ user, onImpersonate }: SuperAdminD
   const fetchData = async () => {
     setLoading(true)
     try {
+      // الحصول على الـ token من localStorage
+      const userStr = localStorage.getItem('erp_user')
+      const token = userStr ? JSON.parse(userStr).token : null
+      
+      // إعداد headers
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json'
+      }
+      
+      // إضافة Authorization header إذا كان موجود
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`
+      }
+      
       if (activeTab === 'dashboard' || activeTab === 'companies') {
-        const response = await fetch('/api/admin/stats')
+        const response = await fetch('/api/admin/stats', { headers })
         const result = await response.json()
         if (result.success) {
           setStats(result.data.stats)
@@ -123,14 +137,14 @@ export default function SuperAdminDashboard({ user, onImpersonate }: SuperAdminD
         }
       }
       if (activeTab === 'collections') {
-        const response = await fetch(`/api/admin/collections?period=${periodFilter}`)
+        const response = await fetch(`/api/admin/collections?period=${periodFilter}`, { headers })
         const result = await response.json()
         if (result.success) {
           setCollections(result.data)
         }
       }
       if (activeTab === 'backup') {
-        const response = await fetch('/api/admin/backup?action=list')
+        const response = await fetch('/api/admin/backup?action=list', { headers })
         const result = await response.json()
         if (result.success) {
           setBackups(result.backups)
