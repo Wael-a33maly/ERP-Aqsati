@@ -1,8 +1,8 @@
-// Service Worker for Aqsati ERP - v2.2.0
+// Service Worker for Aqsati ERP - v2.2.1
 // Plain JavaScript - No TypeScript
 
-const CACHE_NAME = 'aqsati-v2.2.0'
-const OFFLINE_CACHE = 'aqsati-offline-v2.2.0'
+const CACHE_NAME = 'aqsati-v2.2.1'
+const OFFLINE_CACHE = 'aqsati-offline-v2.2.1'
 
 // الملفات الأساسية للتخزين المؤقت
 const STATIC_ASSETS = [
