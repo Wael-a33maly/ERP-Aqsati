@@ -320,7 +320,7 @@ export default function VouchersManagement() {
       </head>
       <body>
         <div class="header">
-          <div class="title">سند ${voucher.type === 'RECEIPT' ? 'قبض' : 'صرف'</div>
+          <div class="title">سند ${voucher.type === 'RECEIPT' ? 'قبض' : 'صرف'}</div>
           <div class="voucher-number">رقم: ${voucher.voucherNumber}</div>
         </div>
         <div class="content">
