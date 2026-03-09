@@ -9,9 +9,11 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Label } from '@/components/ui/label'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import { 
   Plus, Search, Loader2, Edit, Trash2, BookOpen, 
-  Calendar, FileText, ArrowRightLeft, Filter
+  Calendar, FileText, ArrowRightLeft, Filter, X, CheckCircle, AlertCircle
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
@@ -24,7 +26,7 @@ interface JournalLine {
   accountCode: string
   debit: number
   credit: number
-  description?: string
+  description: string
 }
 
 interface JournalEntry {
@@ -41,57 +43,23 @@ interface JournalEntry {
   createdBy: string
 }
 
-// Sample journal entries
-const sampleJournalEntries: JournalEntry[] = [
-  {
-    id: '1',
-    entryNumber: 'JE-0001',
-    date: '2024-01-15',
-    description: 'قيد فاتورة مبيعات رقم INV-0001',
-    reference: 'INV-0001',
-    status: 'POSTED',
-    lines: [
-      { id: '1', accountId: '1.2', accountName: 'العملاء', accountCode: '1.2', debit: 11500, credit: 0, description: 'فاتورة مبيعات' },
-      { id: '2', accountId: '4.1', accountName: 'المبيعات', accountCode: '4.1', debit: 0, credit: 10000, description: 'إيرادات المبيعات' },
-      { id: '3', accountId: '2.3', accountName: 'ضريبة القيمة المضافة', accountCode: '2.3', debit: 0, credit: 1500, description: 'ضريبة 15%' },
-    ],
-    totalDebit: 11500,
-    totalCredit: 11500,
-    createdAt: '2024-01-15T10:30:00Z',
-    createdBy: 'أحمد محمد',
-  },
-  {
-    id: '2',
-    entryNumber: 'JE-0002',
-    date: '2024-01-16',
-    description: 'قيد سداد من العميل',
-    reference: 'PAY-0001',
-    status: 'POSTED',
-    lines: [
-      { id: '1', accountId: '1.1', accountName: 'النقدية والبنوك', accountCode: '1.1', debit: 5000, credit: 0 },
-      { id: '2', accountId: '1.2', accountName: 'العملاء', accountCode: '1.2', debit: 0, credit: 5000 },
-    ],
-    totalDebit: 5000,
-    totalCredit: 5000,
-    createdAt: '2024-01-16T14:00:00Z',
-    createdBy: 'سارة أحمد',
-  },
-  {
-    id: '3',
-    entryNumber: 'JE-0003',
-    date: '2024-01-17',
-    description: 'قيد شراء أصول ثابتة',
-    reference: 'PO-0010',
-    status: 'DRAFT',
-    lines: [
-      { id: '1', accountId: '1.4', accountName: 'الأصول الثابتة', accountCode: '1.4', debit: 25000, credit: 0 },
-      { id: '2', accountId: '2.1', accountName: 'الموردين', accountCode: '2.1', debit: 0, credit: 25000 },
-    ],
-    totalDebit: 25000,
-    totalCredit: 25000,
-    createdAt: '2024-01-17T09:15:00Z',
-    createdBy: 'محمد علي',
-  },
+// الحسابات المتاحة
+const accounts = [
+  { id: '1.1', code: '1.1', name: 'النقدية والبنوك', type: 'ASSET' },
+  { id: '1.2', code: '1.2', name: 'العملاء', type: 'ASSET' },
+  { id: '1.3', code: '1.3', name: 'المخزون', type: 'ASSET' },
+  { id: '1.4', code: '1.4', name: 'الأصول الثابتة', type: 'ASSET' },
+  { id: '2.1', code: '2.1', name: 'الموردين', type: 'LIABILITY' },
+  { id: '2.2', code: '2.2', name: 'القروض', type: 'LIABILITY' },
+  { id: '2.3', code: '2.3', name: 'ضريبة القيمة المضافة', type: 'LIABILITY' },
+  { id: '3.1', code: '3.1', name: 'رأس المال', type: 'EQUITY' },
+  { id: '3.2', code: '3.2', name: 'الأرباح المحتجزة', type: 'EQUITY' },
+  { id: '4.1', code: '4.1', name: 'المبيعات', type: 'REVENUE' },
+  { id: '4.2', code: '4.2', name: 'الإيرادات الأخرى', type: 'REVENUE' },
+  { id: '5.1', code: '5.1', name: 'تكلفة المبيعات', type: 'EXPENSE' },
+  { id: '5.2', code: '5.2', name: 'المصروفات التشغيلية', type: 'EXPENSE' },
+  { id: '5.3', code: '5.3', name: 'مصروفات الرواتب', type: 'EXPENSE' },
+  { id: '5.4', code: '5.4', name: 'مصروفات الإيجار', type: 'EXPENSE' },
 ]
 
 const statusColors = {
@@ -106,6 +74,18 @@ const statusLabels = {
   REVERSED: 'ملغي',
 }
 
+// توليد رقم القيد التلقائي
+const generateEntryNumber = (entries: JournalEntry[]): string => {
+  const lastNumber = entries.reduce((max, entry) => {
+    const num = parseInt(entry.entryNumber.replace('JE-', ''))
+    return num > max ? num : max
+  }, 0)
+  return `JE-${String(lastNumber + 1).padStart(4, '0')}`
+}
+
+// توليد ID فريد
+const generateId = () => `line_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+
 export default function JournalEntriesManagement() {
   const [entries, setEntries] = useState<JournalEntry[]>([])
   const [loading, setLoading] = useState(true)
@@ -113,6 +93,18 @@ export default function JournalEntriesManagement() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [selectedEntry, setSelectedEntry] = useState<JournalEntry | null>(null)
   const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [isCreating, setIsCreating] = useState(false)
+
+  // فورم القيد الجديد
+  const [formData, setFormData] = useState({
+    date: new Date().toISOString().split('T')[0],
+    description: '',
+    reference: '',
+    lines: [
+      { id: generateId(), accountId: '', accountName: '', accountCode: '', debit: 0, credit: 0, description: '' },
+      { id: generateId(), accountId: '', accountName: '', accountCode: '', debit: 0, credit: 0, description: '' },
+    ] as JournalLine[]
+  })
 
   useEffect(() => {
     fetchEntries()
@@ -121,9 +113,10 @@ export default function JournalEntriesManagement() {
   const fetchEntries = async () => {
     try {
       setLoading(true)
-      // Simulate API call
+      // محاكاة API call - في الواقع سيتم جلب البيانات من الـ API
       await new Promise(resolve => setTimeout(resolve, 500))
-      setEntries(sampleJournalEntries)
+      // البيانات التجريبية فارغة في البداية
+      setEntries([])
     } catch (error) {
       console.error('Error fetching journal entries:', error)
     } finally {
@@ -131,24 +124,193 @@ export default function JournalEntriesManagement() {
     }
   }
 
+  // حساب المجاميع
+  const totalDebit = formData.lines.reduce((sum, line) => sum + (Number(line.debit) || 0), 0)
+  const totalCredit = formData.lines.reduce((sum, line) => sum + (Number(line.credit) || 0), 0)
+  const isBalanced = totalDebit === totalCredit && totalDebit > 0
+
+  // إضافة سطر جديد
+  const handleAddLine = () => {
+    setFormData({
+      ...formData,
+      lines: [
+        ...formData.lines,
+        { id: generateId(), accountId: '', accountName: '', accountCode: '', debit: 0, credit: 0, description: '' }
+      ]
+    })
+  }
+
+  // حذف سطر
+  const handleRemoveLine = (lineId: string) => {
+    if (formData.lines.length <= 2) {
+      toast.error('يجب أن يحتوي القيد على سطرين على الأقل')
+      return
+    }
+    setFormData({
+      ...formData,
+      lines: formData.lines.filter(line => line.id !== lineId)
+    })
+  }
+
+  // تحديث سطر
+  const handleUpdateLine = (lineId: string, field: keyof JournalLine, value: string | number) => {
+    setFormData({
+      ...formData,
+      lines: formData.lines.map(line => {
+        if (line.id === lineId) {
+          // إذا تم اختيار حساب
+          if (field === 'accountId') {
+            const account = accounts.find(a => a.id === value)
+            return {
+              ...line,
+              accountId: value as string,
+              accountName: account?.name || '',
+              accountCode: account?.code || ''
+            }
+          }
+          // إذا تم تعبئة مدين، مسح الدائن
+          if (field === 'debit' && Number(value) > 0) {
+            return { ...line, debit: Number(value), credit: 0 }
+          }
+          // إذا تم تعبئة دائن، مسح المدين
+          if (field === 'credit' && Number(value) > 0) {
+            return { ...line, credit: Number(value), debit: 0 }
+          }
+          return { ...line, [field]: value }
+        }
+        return line
+      })
+    })
+  }
+
+  // فتح نافذة قيد جديد
+  const handleOpenNewEntry = () => {
+    setSelectedEntry(null)
+    setFormData({
+      date: new Date().toISOString().split('T')[0],
+      description: '',
+      reference: '',
+      lines: [
+        { id: generateId(), accountId: '', accountName: '', accountCode: '', debit: 0, credit: 0, description: '' },
+        { id: generateId(), accountId: '', accountName: '', accountCode: '', debit: 0, credit: 0, description: '' },
+      ]
+    })
+    setDialogOpen(true)
+  }
+
+  // حفظ القيد مع الترحيل التلقائي
+  const handleSaveEntry = async () => {
+    // التحقق من البيانات
+    if (!formData.description.trim()) {
+      toast.error('يرجى إدخال وصف القيد')
+      return
+    }
+
+    if (!isBalanced) {
+      toast.error('القيد غير متوازن - يجب أن يتساوى المدين والدائن')
+      return
+    }
+
+    // التحقق من اختيار الحسابات
+    const invalidLines = formData.lines.filter(line => !line.accountId)
+    if (invalidLines.length > 0) {
+      toast.error('يرجى اختيار الحسابات لجميع السطور')
+      return
+    }
+
+    // التحقق من وجود قيم
+    const emptyLines = formData.lines.filter(line => line.debit === 0 && line.credit === 0)
+    if (emptyLines.length > 0) {
+      toast.error('يرجى إدخال قيم لجميع السطور')
+      return
+    }
+
+    setIsCreating(true)
+
+    try {
+      // إنشاء القيد الجديد مع الترحيل التلقائي
+      const newEntry: JournalEntry = {
+        id: generateId(),
+        entryNumber: generateEntryNumber(entries),
+        date: formData.date,
+        description: formData.description,
+        reference: formData.reference || undefined,
+        status: 'POSTED', // الترحيل التلقائي
+        lines: formData.lines,
+        totalDebit,
+        totalCredit,
+        createdAt: new Date().toISOString(),
+        createdBy: 'المستخدم الحالي',
+      }
+
+      // إضافة القيد للقائمة
+      setEntries([newEntry, ...entries])
+      
+      toast.success(`تم إنشاء وترحيل القيد ${newEntry.entryNumber} بنجاح`)
+      setDialogOpen(false)
+      
+      // إعادة تعيين الفورم
+      setFormData({
+        date: new Date().toISOString().split('T')[0],
+        description: '',
+        reference: '',
+        lines: [
+          { id: generateId(), accountId: '', accountName: '', accountCode: '', debit: 0, credit: 0, description: '' },
+          { id: generateId(), accountId: '', accountName: '', accountCode: '', debit: 0, credit: 0, description: '' },
+        ]
+      })
+    } catch (error) {
+      toast.error('حدث خطأ أثناء حفظ القيد')
+    } finally {
+      setIsCreating(false)
+    }
+  }
+
+  // عرض تفاصيل القيد
   const handleViewEntry = (entry: JournalEntry) => {
     setSelectedEntry(entry)
     setDialogOpen(true)
   }
 
-  const handlePostEntry = async (id: string) => {
-    toast.success('تم ترحيل القيد بنجاح')
-    fetchEntries()
-  }
-
+  // إلغاء قيد مرحل
   const handleReverseEntry = async (id: string) => {
-    if (confirm('هل أنت متأكد من إلغاء هذا القيد؟')) {
-      toast.success('تم إلغاء القيد بنجاح')
-      fetchEntries()
+    if (confirm('هل أنت متأكد من إلغاء هذا القيد؟ سيتم إنشاء قيد عكسي.')) {
+      const entry = entries.find(e => e.id === id)
+      if (entry) {
+        // إنشاء قيد عكسي
+        const reverseEntry: JournalEntry = {
+          id: generateId(),
+          entryNumber: generateEntryNumber(entries),
+          date: new Date().toISOString().split('T')[0],
+          description: `قيد عكسي لـ ${entry.entryNumber}`,
+          reference: entry.entryNumber,
+          status: 'POSTED',
+          lines: entry.lines.map(line => ({
+            ...line,
+            id: generateId(),
+            debit: line.credit,
+            credit: line.debit,
+          })),
+          totalDebit: entry.totalCredit,
+          totalCredit: entry.totalDebit,
+          createdAt: new Date().toISOString(),
+          createdBy: 'المستخدم الحالي',
+        }
+        
+        // تحديث حالة القيد الأصلي
+        setEntries(entries.map(e => 
+          e.id === id ? { ...e, status: 'REVERSED' as const } : e
+        ))
+        
+        // إضافة القيد العكسي
+        setEntries(prev => [reverseEntry, ...prev])
+        
+        toast.success('تم إلغاء القيد وإنشاء قيد عكسي')
+      }
     }
   }
 
-  // Filter entries
+  // تصفية القيود
   const filteredEntries = entries.filter(entry => {
     const matchesSearch = search === '' || 
       entry.entryNumber.toLowerCase().includes(search.toLowerCase()) ||
@@ -173,7 +335,7 @@ export default function JournalEntriesManagement() {
             <p className="text-muted-foreground">Journal Entries</p>
           </div>
         </div>
-        <Button onClick={() => setDialogOpen(true)}>
+        <Button onClick={handleOpenNewEntry}>
           <Plus className="h-4 w-4 ml-2" />
           قيد جديد
         </Button>
@@ -197,12 +359,12 @@ export default function JournalEntriesManagement() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-yellow-500/10 flex items-center justify-center">
-                <Edit className="h-5 w-5 text-yellow-500" />
+              <div className="h-10 w-10 rounded-lg bg-green-500/10 flex items-center justify-center">
+                <CheckCircle className="h-5 w-5 text-green-500" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">مسودات</p>
-                <p className="text-xl font-bold">{entries.filter(e => e.status === 'DRAFT').length}</p>
+                <p className="text-xs text-muted-foreground">مرحلة</p>
+                <p className="text-xl font-bold">{entries.filter(e => e.status === 'POSTED').length}</p>
               </div>
             </div>
           </CardContent>
@@ -210,12 +372,12 @@ export default function JournalEntriesManagement() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-green-500/10 flex items-center justify-center">
-                <ArrowRightLeft className="h-5 w-5 text-green-500" />
+              <div className="h-10 w-10 rounded-lg bg-red-500/10 flex items-center justify-center">
+                <AlertCircle className="h-5 w-5 text-red-500" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">مرحلة</p>
-                <p className="text-xl font-bold">{entries.filter(e => e.status === 'POSTED').length}</p>
+                <p className="text-xs text-muted-foreground">ملغاة</p>
+                <p className="text-xl font-bold">{entries.filter(e => e.status === 'REVERSED').length}</p>
               </div>
             </div>
           </CardContent>
@@ -253,7 +415,6 @@ export default function JournalEntriesManagement() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">الكل</SelectItem>
-            <SelectItem value="DRAFT">مسودات</SelectItem>
             <SelectItem value="POSTED">مرحلة</SelectItem>
             <SelectItem value="REVERSED">ملغاة</SelectItem>
           </SelectContent>
@@ -266,6 +427,16 @@ export default function JournalEntriesManagement() {
           {loading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : filteredEntries.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+              <BookOpen className="h-12 w-12 mb-4 opacity-30" />
+              <p className="text-lg font-medium">لا توجد قيود محاسبية</p>
+              <p className="text-sm mb-4">ابدأ بإنشاء قيد محاسبي جديد</p>
+              <Button onClick={handleOpenNewEntry}>
+                <Plus className="h-4 w-4 ml-2" />
+                قيد جديد
+              </Button>
             </div>
           ) : (
             <Table>
@@ -297,11 +468,6 @@ export default function JournalEntriesManagement() {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
-                        {entry.status === 'DRAFT' && (
-                          <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); handlePostEntry(entry.id) }}>
-                            ترحيل
-                          </Button>
-                        )}
                         {entry.status === 'POSTED' && (
                           <Button size="sm" variant="ghost" className="text-destructive" onClick={(e) => { e.stopPropagation(); handleReverseEntry(entry.id) }}>
                             إلغاء
@@ -317,16 +483,17 @@ export default function JournalEntriesManagement() {
         </CardContent>
       </Card>
 
-      {/* View Entry Dialog */}
+      {/* New Entry / View Entry Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle>
               {selectedEntry ? `قيد رقم ${selectedEntry.entryNumber}` : 'قيد محاسبي جديد'}
             </DialogTitle>
           </DialogHeader>
           
-          {selectedEntry && (
+          {selectedEntry ? (
+            // عرض القيد الموجود
             <div className="space-y-4">
               {/* Entry Header */}
               <div className="grid grid-cols-3 gap-4 p-4 bg-muted/50 rounded-lg">
@@ -386,20 +553,183 @@ export default function JournalEntriesManagement() {
                   </TableRow>
                 </TableBody>
               </Table>
-
-              {/* Balance Check */}
-              {selectedEntry.totalDebit !== selectedEntry.totalCredit && (
-                <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-lg text-red-700 dark:text-red-400 text-sm">
-                  ⚠️ القيد غير متوازن - الفرق: {(selectedEntry.totalDebit - selectedEntry.totalCredit).toLocaleString('ar-EG')}
+            </div>
+          ) : (
+            // فورم القيد الجديد
+            <div className="space-y-4 flex-1 overflow-hidden">
+              {/* Header Fields */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label>التاريخ</Label>
+                  <Input
+                    type="date"
+                    value={formData.date}
+                    onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                  />
                 </div>
-              )}
+                <div>
+                  <Label>المرجع (اختياري)</Label>
+                  <Input
+                    placeholder="مثال: INV-0001"
+                    value={formData.reference}
+                    onChange={(e) => setFormData({ ...formData, reference: e.target.value })}
+                  />
+                </div>
+                <div className="md:col-span-1">
+                  <Label>الوصف</Label>
+                  <Input
+                    placeholder="وصف القيد"
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              {/* Lines */}
+              <div className="flex-1 overflow-hidden">
+                <div className="flex items-center justify-between mb-2">
+                  <Label>سطور القيد</Label>
+                  <Button size="sm" variant="outline" onClick={handleAddLine}>
+                    <Plus className="h-4 w-4 ml-1" />
+                    إضافة سطر
+                  </Button>
+                </div>
+                
+                <ScrollArea className="h-[250px] border rounded-lg">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[200px]">الحساب</TableHead>
+                        <TableHead className="w-[150px]">مدين</TableHead>
+                        <TableHead className="w-[150px]">دائن</TableHead>
+                        <TableHead className="w-[150px]">الوصف</TableHead>
+                        <TableHead className="w-[50px]"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {formData.lines.map((line, index) => (
+                        <TableRow key={line.id}>
+                          <TableCell>
+                            <Select
+                              value={line.accountId}
+                              onValueChange={(value) => handleUpdateLine(line.id, 'accountId', value)}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="اختر الحساب" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {accounts.map((account) => (
+                                  <SelectItem key={account.id} value={account.id}>
+                                    {account.code} - {account.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                          <TableCell>
+                            <Input
+                              type="number"
+                              placeholder="0"
+                              value={line.debit || ''}
+                              onChange={(e) => handleUpdateLine(line.id, 'debit', parseFloat(e.target.value) || 0)}
+                              className="text-green-600 font-mono"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Input
+                              type="number"
+                              placeholder="0"
+                              value={line.credit || ''}
+                              onChange={(e) => handleUpdateLine(line.id, 'credit', parseFloat(e.target.value) || 0)}
+                              className="text-red-600 font-mono"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Input
+                              placeholder="وصف السطر"
+                              value={line.description}
+                              onChange={(e) => handleUpdateLine(line.id, 'description', e.target.value)}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="text-destructive hover:text-destructive"
+                              onClick={() => handleRemoveLine(line.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </ScrollArea>
+              </div>
+
+              {/* Totals */}
+              <div className="grid grid-cols-3 gap-4 p-4 bg-muted/50 rounded-lg">
+                <div>
+                  <p className="text-sm text-muted-foreground">إجمالي المدين</p>
+                  <p className="text-xl font-bold text-green-600 font-mono">
+                    {totalDebit.toLocaleString('ar-EG')}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">إجمالي الدائن</p>
+                  <p className="text-xl font-bold text-red-600 font-mono">
+                    {totalCredit.toLocaleString('ar-EG')}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">الحالة</p>
+                  {isBalanced ? (
+                    <div className="flex items-center gap-2 text-green-600">
+                      <CheckCircle className="h-5 w-5" />
+                      <span className="font-bold">متوازن ✓</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 text-red-600">
+                      <AlertCircle className="h-5 w-5" />
+                      <span className="font-bold">غير متوازن ({(totalDebit - totalCredit).toLocaleString('ar-EG')})</span>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           )}
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              إغلاق
-            </Button>
+            {!selectedEntry && (
+              <>
+                <Button variant="outline" onClick={() => setDialogOpen(false)}>
+                  إلغاء
+                </Button>
+                <Button 
+                  onClick={handleSaveEntry} 
+                  disabled={!isBalanced || isCreating}
+                  className="gap-2"
+                >
+                  {isCreating ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      جاري الحفظ...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="h-4 w-4" />
+                      حفظ وترحيل
+                    </>
+                  )}
+                </Button>
+              </>
+            )}
+            {selectedEntry && (
+              <Button variant="outline" onClick={() => setDialogOpen(false)}>
+                إغلاق
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
