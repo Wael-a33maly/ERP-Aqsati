@@ -11469,14 +11469,19 @@ export default function ERPPage() {
   // التحقق من وضع الدخول المتخفي - قراءة مرة واحدة عند التهيئة
   const [impersonationState] = useState(() => {
     if (typeof window !== 'undefined') {
-      const impersonationData = localStorage.getItem('impersonation_session')
-      if (impersonationData) {
-        try {
-          const data = JSON.parse(impersonationData)
-          return { isImpersonating: true, companyName: data.companyName || '' }
-        } catch {
-          return { isImpersonating: false, companyName: '' }
+      try {
+        const impersonationData = localStorage.getItem('impersonation_session')
+        if (impersonationData) {
+          try {
+            const data = JSON.parse(impersonationData)
+            return { isImpersonating: true, companyName: data.companyName || '' }
+          } catch {
+            return { isImpersonating: false, companyName: '' }
+          }
         }
+      } catch (e) {
+        // localStorage might not be available in sandboxed iframe
+        return { isImpersonating: false, companyName: '' }
       }
     }
     return { isImpersonating: false, companyName: '' }

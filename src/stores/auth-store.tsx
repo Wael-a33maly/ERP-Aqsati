@@ -1,7 +1,7 @@
 'use client'
 
 import { create } from 'zustand'
-import { persist, createJSONStorage } from 'zustand/middleware'
+import { persist, createJSONStorage, StateStorage } from 'zustand/middleware'
 import { useState, useEffect } from 'react'
 
 export type UserRole = 'SUPER_ADMIN' | 'COMPANY_ADMIN' | 'BRANCH_MANAGER' | 'AGENT' | 'COLLECTOR'
@@ -45,6 +45,35 @@ interface AuthState {
   setLocale: (locale: 'en' | 'ar') => void
 }
 
+// Safe storage implementation for sandboxed iframes
+const safeStorage: StateStorage = {
+  getItem: (name: string): string | null => {
+    try {
+      if (typeof window === 'undefined') return null
+      return localStorage.getItem(name)
+    } catch (e) {
+      // localStorage not available in sandboxed iframe
+      return null
+    }
+  },
+  setItem: (name: string, value: string): void => {
+    try {
+      if (typeof window === 'undefined') return
+      localStorage.setItem(name, value)
+    } catch (e) {
+      // localStorage not available in sandboxed iframe
+    }
+  },
+  removeItem: (name: string): void => {
+    try {
+      if (typeof window === 'undefined') return
+      localStorage.removeItem(name)
+    } catch (e) {
+      // localStorage not available in sandboxed iframe
+    }
+  },
+}
+
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
@@ -79,7 +108,7 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'erp-auth-storage',
-      storage: createJSONStorage(() => localStorage),
+      storage: safeStorage,
       partialize: (state) => ({
         user: state.user,
         isAuthenticated: state.isAuthenticated,

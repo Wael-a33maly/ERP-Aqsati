@@ -48,6 +48,34 @@ const CompanyContext = createContext<CompanyContextType | undefined>(undefined)
 // مفتاح التخزين المحلي
 const STORAGE_KEY = 'erp_active_company'
 
+// Helper functions for safe localStorage access
+const safeGetItem = (key: string): string | null => {
+  try {
+    if (typeof window === 'undefined') return null
+    return localStorage.getItem(key)
+  } catch (e) {
+    return null
+  }
+}
+
+const safeSetItem = (key: string, value: string): void => {
+  try {
+    if (typeof window === 'undefined') return
+    localStorage.setItem(key, value)
+  } catch (e) {
+    // Ignore sandbox errors
+  }
+}
+
+const safeRemoveItem = (key: string): void => {
+  try {
+    if (typeof window === 'undefined') return
+    localStorage.removeItem(key)
+  } catch (e) {
+    // Ignore sandbox errors
+  }
+}
+
 // Provider Component
 export function CompanyProvider({ children }: { children: ReactNode }) {
   const [activeCompany, setActiveCompanyState] = useState<Company | null>(null)
@@ -58,14 +86,14 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const loadActiveCompany = () => {
       try {
-        const stored = localStorage.getItem(STORAGE_KEY)
+        const stored = safeGetItem(STORAGE_KEY)
         if (stored) {
           const parsed = JSON.parse(stored)
           setActiveCompanyState(parsed)
         }
       } catch (error) {
         console.error('Error loading active company from storage:', error)
-        localStorage.removeItem(STORAGE_KEY)
+        safeRemoveItem(STORAGE_KEY)
       }
     }
     
@@ -77,9 +105,9 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
   const setActiveCompany = useCallback((company: Company | null) => {
     setActiveCompanyState(company)
     if (company) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(company))
+      safeSetItem(STORAGE_KEY, JSON.stringify(company))
     } else {
-      localStorage.removeItem(STORAGE_KEY)
+      safeRemoveItem(STORAGE_KEY)
     }
   }, [])
 
@@ -110,7 +138,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
         
         // إذا لم تكن هناك شركة نشطة وهناك شركات متاحة، اختر الأولى
         if (!activeCompany && companyList.length > 0) {
-          const stored = localStorage.getItem(STORAGE_KEY)
+          const stored = safeGetItem(STORAGE_KEY)
           if (stored) {
             try {
               const parsed = JSON.parse(stored)
@@ -119,15 +147,15 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
                 setActiveCompanyState(found)
               } else {
                 setActiveCompanyState(companyList[0])
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(companyList[0]))
+                safeSetItem(STORAGE_KEY, JSON.stringify(companyList[0]))
               }
             } catch {
               setActiveCompanyState(companyList[0])
-              localStorage.setItem(STORAGE_KEY, JSON.stringify(companyList[0]))
+              safeSetItem(STORAGE_KEY, JSON.stringify(companyList[0]))
             }
           } else {
             setActiveCompanyState(companyList[0])
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(companyList[0]))
+            safeSetItem(STORAGE_KEY, JSON.stringify(companyList[0]))
           }
         }
       }
