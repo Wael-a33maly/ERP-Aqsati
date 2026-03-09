@@ -6,11 +6,17 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { Badge } from '@/components/ui/badge'
 import { 
   BarChart3, Download, Printer, Calendar, TrendingUp, TrendingDown,
-  DollarSign, Building2, CreditCard, PieChart, LineChart, FileSpreadsheet
+  DollarSign, Building2, CreditCard, PieChart, LineChart, FileSpreadsheet,
+  User, Users, Search, FileText, ChevronLeft, ChevronRight
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
 
 // Sample financial data
 const balanceSheetData = {
@@ -83,17 +89,183 @@ const cashFlowData = {
   closingBalance: 80000,
 }
 
+// بيانات العملاء والموردين
+const customers = [
+  { id: 'C001', name: 'أحمد محمد علي', phone: '01012345678', balance: 15000 },
+  { id: 'C002', name: 'محمود حسن إبراهيم', phone: '01023456789', balance: 8500 },
+  { id: 'C003', name: 'شركة النور للتجارة', phone: '01034567890', balance: 45000 },
+  { id: 'C004', name: 'فاطمة عبدالله سالم', phone: '01045678901', balance: 3200 },
+  { id: 'C005', name: 'مؤسسة الأمل التجارية', phone: '01056789012', balance: 28000 },
+]
+
+const suppliers = [
+  { id: 'S001', name: 'شركة التوريدات الحديثة', phone: '01112345678', balance: 35000 },
+  { id: 'S002', name: 'مؤسسة الخليج للتجارة', phone: '01123456789', balance: 22000 },
+  { id: 'S003', name: 'شركة الشرق الأوسط', phone: '01134567890', balance: 18000 },
+  { id: 'S004', name: 'مصنع الإنتاج الصناعي', phone: '01145678901', balance: 55000 },
+  { id: 'S005', name: 'شركة التكنولوجيا المتقدمة', phone: '01156789012', balance: 12000 },
+]
+
+// أنواع الحركات في كشف الحساب
+interface AccountTransaction {
+  id: string
+  date: string
+  type: 'INVOICE' | 'PAYMENT' | 'RECEIPT' | 'CREDIT_NOTE' | 'DEBIT_NOTE' | 'OPENING'
+  reference: string
+  debit: number
+  credit: number
+  balance: number
+  description: string
+}
+
 export default function FinancialReportsManagement() {
   const [selectedPeriod, setSelectedPeriod] = useState('current')
   const [selectedYear, setSelectedYear] = useState('2024')
   const [activeReport, setActiveReport] = useState('balance-sheet')
+  
+  // كشف الحساب
+  const [accountStatementOpen, setAccountStatementOpen] = useState(false)
+  const [accountType, setAccountType] = useState<'CUSTOMER' | 'SUPPLIER'>('CUSTOMER')
+  const [selectedAccountId, setSelectedAccountId] = useState('')
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
+  const [accountTransactions, setAccountTransactions] = useState<AccountTransaction[]>([])
+  const [loadingStatement, setLoadingStatement] = useState(false)
 
   const handleExport = (format: 'pdf' | 'excel') => {
     console.log(`Exporting ${activeReport} as ${format}`)
+    toast.success(`جاري تصدير التقرير بصيغة ${format === 'pdf' ? 'PDF' : 'Excel'}`)
   }
 
   const handlePrint = () => {
     window.print()
+  }
+
+  // فتح نافذة كشف الحساب
+  const handleOpenAccountStatement = () => {
+    setAccountStatementOpen(true)
+    setSelectedAccountId('')
+    setDateFrom('')
+    setDateTo('')
+    setAccountTransactions([])
+  }
+
+  // توليد كشف الحساب
+  const handleGenerateStatement = async () => {
+    if (!selectedAccountId) {
+      toast.error('يرجى اختيار الحساب')
+      return
+    }
+
+    setLoadingStatement(true)
+    
+    // محاكاة API call
+    await new Promise(resolve => setTimeout(resolve, 1000))
+
+    const account = accountType === 'CUSTOMER' 
+      ? customers.find(c => c.id === selectedAccountId)
+      : suppliers.find(s => s.id === selectedAccountId)
+
+    if (!account) {
+      toast.error('الحساب غير موجود')
+      setLoadingStatement(false)
+      return
+    }
+
+    // توليد حركات تجريبية
+    const transactions: AccountTransaction[] = [
+      {
+        id: '1',
+        date: '2024-01-01',
+        type: 'OPENING',
+        reference: 'رصيد افتتاحي',
+        debit: 0,
+        credit: 0,
+        balance: account.balance * 0.3,
+        description: 'رصيد افتتاحي من الفترة السابقة',
+      },
+      {
+        id: '2',
+        date: '2024-01-15',
+        type: 'INVOICE',
+        reference: 'INV-0001',
+        debit: 5000,
+        credit: 0,
+        balance: account.balance * 0.3 + 5000,
+        description: 'فاتورة مبيعات',
+      },
+      {
+        id: '3',
+        date: '2024-01-20',
+        type: 'RECEIPT',
+        reference: 'RV-0001',
+        debit: 0,
+        credit: 3000,
+        balance: account.balance * 0.3 + 2000,
+        description: 'سند قبض',
+      },
+      {
+        id: '4',
+        date: '2024-02-05',
+        type: 'INVOICE',
+        reference: 'INV-0005',
+        debit: 8500,
+        credit: 0,
+        balance: account.balance * 0.3 + 10500,
+        description: 'فاتورة مبيعات',
+      },
+      {
+        id: '5',
+        date: '2024-02-15',
+        type: 'PAYMENT',
+        reference: 'PV-0002',
+        debit: 0,
+        credit: 5500,
+        balance: account.balance * 0.3 + 5000,
+        description: 'سند صرف',
+      },
+      {
+        id: '6',
+        date: '2024-02-28',
+        type: 'CREDIT_NOTE',
+        reference: 'CN-0001',
+        debit: 0,
+        credit: 1000,
+        balance: account.balance * 0.3 + 4000,
+        description: 'إشعار دائن - مرتجع',
+      },
+      {
+        id: '7',
+        date: '2024-03-10',
+        type: 'INVOICE',
+        reference: 'INV-0012',
+        debit: 12000,
+        credit: 0,
+        balance: account.balance * 0.3 + 16000,
+        description: 'فاتورة مبيعات',
+      },
+    ]
+
+    setAccountTransactions(transactions)
+    setLoadingStatement(false)
+    toast.success('تم توليد كشف الحساب')
+  }
+
+  // حساب إجمالي المدين والدائن
+  const totalDebit = accountTransactions.reduce((sum, t) => sum + t.debit, 0)
+  const totalCredit = accountTransactions.reduce((sum, t) => sum + t.credit, 0)
+  const finalBalance = accountTransactions.length > 0 
+    ? accountTransactions[accountTransactions.length - 1].balance 
+    : 0
+
+  // نوع الحركة
+  const transactionTypeLabels: Record<string, { label: string; color: string }> = {
+    INVOICE: { label: 'فاتورة', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' },
+    PAYMENT: { label: 'سند صرف', color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' },
+    RECEIPT: { label: 'سند قبض', color: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' },
+    CREDIT_NOTE: { label: 'إشعار دائن', color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400' },
+    DEBIT_NOTE: { label: 'إشعار مدين', color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400' },
+    OPENING: { label: 'رصيد افتتاحي', color: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400' },
   }
 
   return (
@@ -110,6 +282,10 @@ export default function FinancialReportsManagement() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={handleOpenAccountStatement}>
+            <User className="h-4 w-4 ml-2" />
+            كشف حساب
+          </Button>
           <Button variant="outline" onClick={() => handleExport('excel')}>
             <FileSpreadsheet className="h-4 w-4 ml-2" />
             Excel
@@ -482,6 +658,284 @@ export default function FinancialReportsManagement() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Account Statement Dialog */}
+      <Dialog open={accountStatementOpen} onOpenChange={setAccountStatementOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              كشف حساب - Account Statement
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* نوع الحساب */}
+            <div className="grid grid-cols-2 gap-4">
+              <Button
+                type="button"
+                variant={accountType === 'CUSTOMER' ? 'default' : 'outline'}
+                className={cn(
+                  "h-16 flex-col gap-1",
+                  accountType === 'CUSTOMER' && "bg-blue-600 hover:bg-blue-700"
+                )}
+                onClick={() => { setAccountType('CUSTOMER'); setSelectedAccountId(''); }}
+              >
+                <Users className="h-5 w-5" />
+                <span>عميل</span>
+              </Button>
+              <Button
+                type="button"
+                variant={accountType === 'SUPPLIER' ? 'default' : 'outline'}
+                className={cn(
+                  "h-16 flex-col gap-1",
+                  accountType === 'SUPPLIER' && "bg-orange-600 hover:bg-orange-700"
+                )}
+                onClick={() => { setAccountType('SUPPLIER'); setSelectedAccountId(''); }}
+              >
+                <Building2 className="h-5 w-5" />
+                <span>مورد</span>
+              </Button>
+            </div>
+
+            {/* اختيار الحساب */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="md:col-span-2">
+                <Label>{accountType === 'CUSTOMER' ? 'العميل' : 'المورد'}</Label>
+                <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={`اختر ${accountType === 'CUSTOMER' ? 'العميل' : 'المورد'}`} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(accountType === 'CUSTOMER' ? customers : suppliers).map((account) => (
+                      <SelectItem key={account.id} value={account.id}>
+                        <div className="flex items-center justify-between w-full">
+                          <span>{account.name}</span>
+                          <span className="text-muted-foreground mr-2">
+                            (رصيد: {account.balance.toLocaleString('ar-EG')} ج.م)
+                          </span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-end">
+                <Button 
+                  onClick={handleGenerateStatement} 
+                  disabled={!selectedAccountId || loadingStatement}
+                  className="w-full"
+                >
+                  {loadingStatement ? (
+                    <>
+                      <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin ml-2" />
+                      جاري التحميل...
+                    </>
+                  ) : (
+                    <>
+                      <Search className="h-4 w-4 ml-2" />
+                      عرض الكشف
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+
+            {/* نطاق التاريخ */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label>من تاريخ</Label>
+                <Input
+                  type="date"
+                  value={dateFrom}
+                  onChange={(e) => setDateFrom(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label>إلى تاريخ</Label>
+                <Input
+                  type="date"
+                  value={dateTo}
+                  onChange={(e) => setDateTo(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* كشف الحساب */}
+            {accountTransactions.length > 0 && (
+              <div className="space-y-4">
+                {/* معلومات الحساب */}
+                <div className="p-4 bg-muted/50 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground">
+                        {accountType === 'CUSTOMER' ? 'العميل' : 'المورد'}
+                      </p>
+                      <p className="font-bold text-lg">
+                        {(accountType === 'CUSTOMER' ? customers : suppliers).find(a => a.id === selectedAccountId)?.name}
+                      </p>
+                    </div>
+                    <div className="text-left">
+                      <p className="text-sm text-muted-foreground">الرصيد الحالي</p>
+                      <p className={cn(
+                        "font-bold text-xl",
+                        finalBalance >= 0 ? 'text-green-600' : 'text-red-600'
+                      )}>
+                        {finalBalance.toLocaleString('ar-EG')} ج.م
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* جدول الحركات */}
+                <Card>
+                  <CardContent className="p-0">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>التاريخ</TableHead>
+                          <TableHead>النوع</TableHead>
+                          <TableHead>المرجع</TableHead>
+                          <TableHead>البيان</TableHead>
+                          <TableHead className="text-left">مدين</TableHead>
+                          <TableHead className="text-left">دائن</TableHead>
+                          <TableHead className="text-left">الرصيد</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {accountTransactions.map((transaction) => (
+                          <TableRow key={transaction.id}>
+                            <TableCell className="font-mono text-sm">
+                              {new Date(transaction.date).toLocaleDateString('ar-EG')}
+                            </TableCell>
+                            <TableCell>
+                              <Badge className={transactionTypeLabels[transaction.type].color}>
+                                {transactionTypeLabels[transaction.type].label}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="font-mono">
+                              {transaction.reference}
+                            </TableCell>
+                            <TableCell className="max-w-[200px] truncate">
+                              {transaction.description}
+                            </TableCell>
+                            <TableCell className="text-left font-mono text-green-600">
+                              {transaction.debit > 0 ? transaction.debit.toLocaleString('ar-EG') : '-'}
+                            </TableCell>
+                            <TableCell className="text-left font-mono text-red-600">
+                              {transaction.credit > 0 ? transaction.credit.toLocaleString('ar-EG') : '-'}
+                            </TableCell>
+                            <TableCell className={cn(
+                              "text-left font-mono font-medium",
+                              transaction.balance >= 0 ? 'text-green-600' : 'text-red-600'
+                            )}>
+                              {transaction.balance.toLocaleString('ar-EG')}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                        {/* صف الإجمالي */}
+                        <TableRow className="bg-muted/50 font-bold">
+                          <TableCell colSpan={4}>الإجمالي</TableCell>
+                          <TableCell className="text-left font-mono text-green-600">
+                            {totalDebit.toLocaleString('ar-EG')}
+                          </TableCell>
+                          <TableCell className="text-left font-mono text-red-600">
+                            {totalCredit.toLocaleString('ar-EG')}
+                          </TableCell>
+                          <TableCell className={cn(
+                            "text-left font-mono",
+                            finalBalance >= 0 ? 'text-green-600' : 'text-red-600'
+                          )}>
+                            {finalBalance.toLocaleString('ar-EG')}
+                          </TableCell>
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+
+                {/* ملخص */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-lg bg-green-500/10 flex items-center justify-center">
+                          <TrendingUp className="h-5 w-5 text-green-500" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">إجمالي المدين</p>
+                          <p className="text-xl font-bold text-green-600 font-mono">
+                            {totalDebit.toLocaleString('ar-EG')}
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-lg bg-red-500/10 flex items-center justify-center">
+                          <TrendingDown className="h-5 w-5 text-red-500" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">إجمالي الدائن</p>
+                          <p className="text-xl font-bold text-red-600 font-mono">
+                            {totalCredit.toLocaleString('ar-EG')}
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                          <DollarSign className="h-5 w-5 text-blue-500" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">الرصيد النهائي</p>
+                          <p className={cn(
+                            "text-xl font-bold font-mono",
+                            finalBalance >= 0 ? 'text-green-600' : 'text-red-600'
+                          )}>
+                            {finalBalance.toLocaleString('ar-EG')}
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+            )}
+
+            {/* رسالة فارغة */}
+            {accountTransactions.length === 0 && selectedAccountId && (
+              <div className="text-center py-8 text-muted-foreground">
+                <FileText className="h-12 w-12 mx-auto mb-4 opacity-30" />
+                <p>اضغط "عرض الكشف" لعرض حركات الحساب</p>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAccountStatementOpen(false)}>
+              إغلاق
+            </Button>
+            {accountTransactions.length > 0 && (
+              <>
+                <Button variant="outline" onClick={() => toast.success('جاري تصدير Excel...')}>
+                  <FileSpreadsheet className="h-4 w-4 ml-2" />
+                  Excel
+                </Button>
+                <Button onClick={() => toast.success('جاري الطباعة...')}>
+                  <Printer className="h-4 w-4 ml-2" />
+                  طباعة
+                </Button>
+              </>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
