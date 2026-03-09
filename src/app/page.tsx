@@ -20,7 +20,7 @@ import {
   Download, FileText, Layers, TrendingUp, Bell, Check, AlertTriangle, Info, CheckCircle, LogOut, Save, Trash2,
   BellRing, XCircle, AlertCircle, Clock, Upload, Gift, PanelRightClose, PanelRightOpen, Layout, Percent as CommissionIcon,
   Users as UsersIcon, FileStack, Eye, Calendar, User, Building, LayoutTemplate, Key, Link, MessageCircle, Send, Copy,
-  TruckIcon, FileInput, ArrowLeftRight, Mail, Filter
+  TruckIcon, FileInput, ArrowLeftRight, Mail, Filter, Calculator, BookOpen, Landmark
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTheme } from 'next-themes'
@@ -46,6 +46,10 @@ import InventoryTransfersManagement from '@/components/procurement/inventory-tra
 import InventoryReportsPage from '@/components/procurement/inventory-reports-page'
 import SuperAdminDashboard from '@/components/super-admin/super-admin-dashboard'
 import ImpersonationBanner from '@/components/impersonation-banner'
+import AccountTree from '@/components/accounting/account-tree'
+import JournalEntries from '@/components/accounting/journal-entries'
+import Vouchers from '@/components/accounting/vouchers'
+import FinancialReports from '@/components/accounting/financial-reports'
 
 // ============== TYPES ==============
 type UserType = { id: string; email: string; name: string; role: string }
@@ -379,6 +383,12 @@ const navGroups = [
     { id: 'installments', label: 'الأقساط', icon: CreditCard, color: 'text-sky-500', bgColor: 'bg-sky-500/10' },
     { id: 'collections', label: 'المقبوضات', icon: DollarSign, color: 'text-teal-500', bgColor: 'bg-teal-500/10' },
     { id: 'returns', label: 'المرتجعات', icon: RotateCcw, color: 'text-rose-500', bgColor: 'bg-rose-500/10' },
+  ]},
+  { id: 'accounting', title: 'الحسابات', items: [
+    { id: 'account-tree', label: 'شجرة الحسابات', icon: Landmark, color: 'text-blue-600', bgColor: 'bg-blue-600/10' },
+    { id: 'journal-entries', label: 'القيود المحاسبية', icon: BookOpen, color: 'text-indigo-500', bgColor: 'bg-indigo-500/10' },
+    { id: 'vouchers', label: 'السندات', icon: FileText, color: 'text-purple-500', bgColor: 'bg-purple-500/10' },
+    { id: 'financial-reports', label: 'التقارير المالية', icon: BarChart3, color: 'text-teal-500', bgColor: 'bg-teal-500/10' },
   ]},
   { id: 'procurement', title: 'المشتريات والمخازن', items: [
     { id: 'suppliers', label: 'الموردين', icon: TruckIcon, color: 'text-blue-600', bgColor: 'bg-blue-600/10' },
@@ -10901,6 +10911,10 @@ function MainApp({ user, logout }: { user: UserType; logout: () => void }) {
       case 'purchase-returns': return <PurchaseReturnsManagement />
       case 'inventory-transfers': return <InventoryTransfersManagement />
       case 'inventory-reports': return <InventoryReportsPage />
+      case 'account-tree': return <AccountTree />
+      case 'journal-entries': return <JournalEntries />
+      case 'vouchers': return <Vouchers />
+      case 'financial-reports': return <FinancialReports />
       default: return <Dashboard user={user} onNavigate={setCurrentView} />
     }
   }

@@ -50,6 +50,8 @@ import {
   Percent,
   Printer,
   Loader2,
+  Calculator,
+  ChevronLeft,
 } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { toast } from 'sonner'
@@ -134,6 +136,39 @@ const navItems: NavItem[] = [
     permission: 'payments.read',
   },
   {
+    label: 'Accounting',
+    labelAr: 'الحسابات',
+    href: '/accounting',
+    icon: <Calculator className="h-4 w-4" />,
+    permission: 'accounting.read',
+    children: [
+      {
+        label: 'Chart of Accounts',
+        labelAr: 'شجرة الحسابات',
+        href: '/accounting/accounts',
+        icon: <FileText className="h-4 w-4" />,
+      },
+      {
+        label: 'Journal Entries',
+        labelAr: 'القيود المحاسبية',
+        href: '/accounting/journals',
+        icon: <FileText className="h-4 w-4" />,
+      },
+      {
+        label: 'Vouchers',
+        labelAr: 'السندات',
+        href: '/accounting/vouchers',
+        icon: <FileText className="h-4 w-4" />,
+      },
+      {
+        label: 'Financial Reports',
+        labelAr: 'التقارير المالية',
+        href: '/accounting/reports',
+        icon: <BarChart3 className="h-4 w-4" />,
+      },
+    ],
+  },
+  {
     label: 'Installments',
     labelAr: 'الأقساط',
     href: '/installments',
@@ -190,10 +225,19 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [expandedItems, setExpandedItems] = useState<string[]>([])
 
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  const toggleExpand = (href: string) => {
+    setExpandedItems(prev => 
+      prev.includes(href) 
+        ? prev.filter(item => item !== href)
+        : [...prev, href]
+    )
+  }
 
   const handleLogout = async () => {
     setIsLoggingOut(true)
@@ -238,21 +282,55 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       <ScrollArea className="flex-1 px-2 py-4">
         <nav className="space-y-1">
           {filteredNavItems.map((item) => (
-            <Button
-              key={item.href}
-              variant="ghost"
-              className="w-full justify-start gap-3 h-10"
-              onClick={() => {
-                // In a real app, this would use router.push
-                setSidebarOpen(false)
-              }}
-            >
-              {item.icon}
-              <div className="flex flex-col items-start">
-                <span>{item.label}</span>
-                <span className="text-xs text-muted-foreground">{item.labelAr}</span>
-              </div>
-            </Button>
+            <div key={item.href}>
+              <Button
+                variant="ghost"
+                className="w-full justify-start gap-3 h-10"
+                onClick={() => {
+                  if (item.children) {
+                    toggleExpand(item.href)
+                  } else {
+                    setSidebarOpen(false)
+                  }
+                }}
+              >
+                {item.icon}
+                <div className="flex flex-col items-start flex-1">
+                  <span>{item.label}</span>
+                  <span className="text-xs text-muted-foreground">{item.labelAr}</span>
+                </div>
+                {item.children && (
+                  <ChevronLeft 
+                    className={`h-4 w-4 transition-transform duration-200 ${
+                      expandedItems.includes(item.href) ? '-rotate-90' : ''
+                    }`} 
+                  />
+                )}
+              </Button>
+              
+              {/* Sub-menu */}
+              {item.children && expandedItems.includes(item.href) && (
+                <div className="mr-4 mt-1 space-y-1 border-r pr-2">
+                  {item.children.map((child) => (
+                    <Button
+                      key={child.href}
+                      variant="ghost"
+                      size="sm"
+                      className="w-full justify-start gap-2 h-8"
+                      onClick={() => {
+                        setSidebarOpen(false)
+                      }}
+                    >
+                      {child.icon}
+                      <div className="flex flex-col items-start">
+                        <span className="text-sm">{child.label}</span>
+                        <span className="text-xs text-muted-foreground">{child.labelAr}</span>
+                      </div>
+                    </Button>
+                  ))}
+                </div>
+              )}
+            </div>
           ))}
         </nav>
       </ScrollArea>
