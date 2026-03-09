@@ -115,50 +115,61 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `
               // تسجيل Service Worker للعمل أوفلاين
-              if ('serviceWorker' in navigator) {
-                window.addEventListener('load', async function() {
-                  try {
-                    const registration = await navigator.serviceWorker.register('/sw.js');
-                    console.log('[PWA] Service Worker registered:', registration.scope);
-
-                    // التحقق من التحديثات
-                    registration.addEventListener('updatefound', () => {
-                      const newWorker = registration.installing;
-                      if (newWorker) {
-                        newWorker.addEventListener('statechange', () => {
-                          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                            // يوجد تحديث جديد
-                            if (confirm('🔄 يوجد تحديث جديد للتطبيق. هل تريد التحديث الآن؟')) {
-                              newWorker.postMessage({ type: 'SKIP_WAITING' });
-                              window.location.reload();
-                            }
-                          }
-                        });
-                      }
-                    });
-
-                    // طلب إذن الإشعارات
-                    if ('Notification' in window && Notification.permission === 'default') {
-                      const permission = await Notification.requestPermission();
-                      console.log('[PWA] Notification permission:', permission);
-                    }
-
-                  } catch (error) {
-                    console.error('[PWA] Service Worker registration failed:', error);
+              (function() {
+                try {
+                  // التحقق من دعم Service Worker (مع معالجة sandbox)
+                  if (!navigator.serviceWorker) {
+                    console.log('[PWA] Service Worker not supported or disabled in sandbox');
+                    return;
                   }
-                });
+                  
+                  window.addEventListener('load', async function() {
+                    try {
+                      const registration = await navigator.serviceWorker.register('/sw.js');
+                      console.log('[PWA] Service Worker registered:', registration.scope);
 
-                // مراقبة حالة الاتصال
-                window.addEventListener('online', () => {
-                  console.log('[PWA] Back online');
-                  document.dispatchEvent(new CustomEvent('connection-changed', { detail: { online: true } }));
-                });
-                
-                window.addEventListener('offline', () => {
-                  console.log('[PWA] Gone offline');
-                  document.dispatchEvent(new CustomEvent('connection-changed', { detail: { online: false } }));
-                });
-              }
+                      // التحقق من التحديثات
+                      registration.addEventListener('updatefound', () => {
+                        const newWorker = registration.installing;
+                        if (newWorker) {
+                          newWorker.addEventListener('statechange', () => {
+                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                              // يوجد تحديث جديد
+                              if (confirm('🔄 يوجد تحديث جديد للتطبيق. هل تريد التحديث الآن؟')) {
+                                newWorker.postMessage({ type: 'SKIP_WAITING' });
+                                window.location.reload();
+                              }
+                            }
+                          });
+                        }
+                      });
+
+                      // طلب إذن الإشعارات
+                      if ('Notification' in window && Notification.permission === 'default') {
+                        const permission = await Notification.requestPermission();
+                        console.log('[PWA] Notification permission:', permission);
+                      }
+
+                    } catch (error) {
+                      console.log('[PWA] Service Worker registration skipped:', error.message);
+                    }
+                  });
+
+                  // مراقبة حالة الاتصال
+                  window.addEventListener('online', () => {
+                    console.log('[PWA] Back online');
+                    document.dispatchEvent(new CustomEvent('connection-changed', { detail: { online: true } }));
+                  });
+                  
+                  window.addEventListener('offline', () => {
+                    console.log('[PWA] Gone offline');
+                    document.dispatchEvent(new CustomEvent('connection-changed', { detail: { online: false } }));
+                  });
+                } catch (e) {
+                  // Service Worker غير مدعوم أو معطل في sandbox
+                  console.log('[PWA] Service Worker disabled in this environment');
+                }
+              })();
             `,
           }}
         />

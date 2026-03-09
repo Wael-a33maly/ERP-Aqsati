@@ -24,7 +24,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTheme } from 'next-themes'
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { authApi } from '@/lib/api-client'
@@ -10925,6 +10925,7 @@ function MainApp({ user, logout }: { user: UserType; logout: () => void }) {
             <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
               <SheetTrigger asChild><Button variant="ghost" size="icon" className="lg:hidden hover:bg-muted/50"><Menu className="h-5 w-5" /></Button></SheetTrigger>
               <SheetContent side="right" className="p-0 w-72">
+                <SheetTitle className="sr-only">القائمة الجانبية</SheetTitle>
                 <Sidebar currentView={currentView} onNavigate={setCurrentView} onClose={() => setSidebarOpen(false)} fontSize={sidebarFontSize} onFontSizeChange={changeFontSize} user={user} />
               </SheetContent>
             </Sheet>
