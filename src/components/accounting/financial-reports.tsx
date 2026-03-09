@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -13,10 +13,21 @@ import { Badge } from '@/components/ui/badge'
 import { 
   BarChart3, Download, Printer, Calendar, TrendingUp, TrendingDown,
   DollarSign, Building2, CreditCard, PieChart, LineChart, FileSpreadsheet,
-  User, Users, Search, FileText, ChevronLeft, ChevronRight
+  User, Users, Search, FileText, ChevronLeft, ChevronRight, X
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
+
+// تنسيق الأرقام بالإنجليزية
+const formatNumber = (num: number): string => {
+  return num.toLocaleString('en-US')
+}
+
+// تنسيق التاريخ بالإنجليزية
+const formatDate = (dateStr: string): string => {
+  const date = new Date(dateStr)
+  return date.toLocaleDateString('en-CA')
+}
 
 // Sample financial data
 const balanceSheetData = {
@@ -127,27 +138,312 @@ export default function FinancialReportsManagement() {
   const [accountStatementOpen, setAccountStatementOpen] = useState(false)
   const [accountType, setAccountType] = useState<'CUSTOMER' | 'SUPPLIER'>('CUSTOMER')
   const [selectedAccountId, setSelectedAccountId] = useState('')
+  const [selectedAccountName, setSelectedAccountName] = useState('')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
   const [accountTransactions, setAccountTransactions] = useState<AccountTransaction[]>([])
   const [loadingStatement, setLoadingStatement] = useState(false)
+
+  // بحث العملاء/الموردين
+  const [accountSearch, setAccountSearch] = useState('')
+  const [showAccountDropdown, setShowAccountDropdown] = useState(false)
+  const accountDropdownRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    // إغلاق القائمة المنسدلة عند النقر خارجها
+    const handleClickOutside = (event: MouseEvent) => {
+      if (accountDropdownRef.current && !accountDropdownRef.current.contains(event.target as Node)) {
+        setShowAccountDropdown(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   const handleExport = (format: 'pdf' | 'excel') => {
     console.log(`Exporting ${activeReport} as ${format}`)
     toast.success(`جاري تصدير التقرير بصيغة ${format === 'pdf' ? 'PDF' : 'Excel'}`)
   }
 
+  // طباعة التقرير الحالي
   const handlePrint = () => {
-    window.print()
+    let printContent = ''
+    
+    if (activeReport === 'balance-sheet') {
+      printContent = generateBalanceSheetPrint()
+    } else if (activeReport === 'income-statement') {
+      printContent = generateIncomeStatementPrint()
+    } else if (activeReport === 'cash-flow') {
+      printContent = generateCashFlowPrint()
+    }
+
+    const printWindow = window.open('', '_blank')
+    if (printWindow && printContent) {
+      printWindow.document.write(printContent)
+      printWindow.document.close()
+      printWindow.print()
+    }
+  }
+
+  // توليد محتوى طباعة الميزانية
+  const generateBalanceSheetPrint = () => {
+    return `
+      <!DOCTYPE html>
+      <html dir="rtl" lang="ar">
+      <head>
+        <meta charset="UTF-8">
+        <title>الميزانية العمومية</title>
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { font-family: Arial, sans-serif; padding: 20px; direction: rtl; }
+          .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 20px; }
+          .title { font-size: 24px; font-weight: bold; }
+          .date { font-size: 14px; margin-top: 10px; color: #666; }
+          .section { margin: 20px 0; }
+          .section-title { font-size: 18px; font-weight: bold; color: #333; margin-bottom: 10px; padding-bottom: 5px; border-bottom: 1px solid #eee; }
+          table { width: 100%; border-collapse: collapse; }
+          th, td { padding: 8px; text-align: right; }
+          td:last-child { text-align: left; font-family: monospace; }
+          .total-row { background: #f3f4f6; font-weight: bold; }
+          .grand-total { background: #e5e7eb; font-weight: bold; font-size: 16px; }
+          .assets { color: #16a34a; }
+          .liabilities { color: #dc2626; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div class="title">الميزانية العمومية</div>
+          <div class="date">Balance Sheet - ${selectedYear}</div>
+        </div>
+        
+        <div class="section">
+          <div class="section-title assets">الأصول (Assets)</div>
+          <table>
+            <tbody>
+              <tr><td colspan="2" style="font-weight: bold; color: #666;">الأصول المتداولة</td></tr>
+              ${balanceSheetData.assets.current.map(item => `
+                <tr><td>${item.name}</td><td>${formatNumber(item.amount)}</td></tr>
+              `).join('')}
+              <tr class="total-row">
+                <td>إجمالي الأصول المتداولة</td>
+                <td>${formatNumber(balanceSheetData.assets.current.reduce((s, a) => s + a.amount, 0))}</td>
+              </tr>
+              <tr><td colspan="2" style="font-weight: bold; color: #666; padding-top: 15px;">الأصول الثابتة</td></tr>
+              ${balanceSheetData.assets.fixed.map(item => `
+                <tr><td>${item.name}</td><td style="color: ${item.amount < 0 ? '#dc2626' : '#000'}">${formatNumber(item.amount)}</td></tr>
+              `).join('')}
+              <tr class="total-row">
+                <td>إجمالي الأصول الثابتة</td>
+                <td>${formatNumber(balanceSheetData.assets.fixed.reduce((s, a) => s + a.amount, 0))}</td>
+              </tr>
+              <tr class="grand-total assets">
+                <td>إجمالي الأصول</td>
+                <td>${formatNumber(balanceSheetData.assets.total)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="section">
+          <div class="section-title liabilities">الخصوم وحقوق الملكية</div>
+          <table>
+            <tbody>
+              <tr><td colspan="2" style="font-weight: bold; color: #666;">الخصوم المتداولة</td></tr>
+              ${balanceSheetData.liabilities.current.map(item => `
+                <tr><td>${item.name}</td><td>${formatNumber(item.amount)}</td></tr>
+              `).join('')}
+              <tr><td colspan="2" style="font-weight: bold; color: #666; padding-top: 15px;">الخصوم طويلة الأجل</td></tr>
+              ${balanceSheetData.liabilities.longTerm.map(item => `
+                <tr><td>${item.name}</td><td>${formatNumber(item.amount)}</td></tr>
+              `).join('')}
+              <tr class="total-row">
+                <td>إجمالي الخصوم</td>
+                <td>${formatNumber(balanceSheetData.liabilities.total)}</td>
+              </tr>
+              <tr><td colspan="2" style="font-weight: bold; color: #666; padding-top: 15px;">حقوق الملكية</td></tr>
+              ${balanceSheetData.equity.items.map(item => `
+                <tr><td>${item.name}</td><td>${formatNumber(item.amount)}</td></tr>
+              `).join('')}
+              <tr class="total-row">
+                <td>إجمالي حقوق الملكية</td>
+                <td>${formatNumber(balanceSheetData.equity.total)}</td>
+              </tr>
+              <tr class="grand-total liabilities">
+                <td>إجمالي الخصوم وحقوق الملكية</td>
+                <td>${formatNumber(balanceSheetData.liabilities.total + balanceSheetData.equity.total)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </body>
+      </html>
+    `
+  }
+
+  // توليد محتوى طباعة قائمة الدخل
+  const generateIncomeStatementPrint = () => {
+    return `
+      <!DOCTYPE html>
+      <html dir="rtl" lang="ar">
+      <head>
+        <meta charset="UTF-8">
+        <title>قائمة الدخل</title>
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { font-family: Arial, sans-serif; padding: 20px; direction: rtl; }
+          .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 20px; }
+          .title { font-size: 24px; font-weight: bold; }
+          .date { font-size: 14px; margin-top: 10px; color: #666; }
+          .section { margin: 20px 0; }
+          table { width: 100%; border-collapse: collapse; }
+          td { padding: 8px; text-align: right; }
+          td:last-child { text-align: left; font-family: monospace; }
+          .total-row { background: #f3f4f6; font-weight: bold; }
+          .profit { background: #dcfce7; font-weight: bold; }
+          .net-profit { background: linear-gradient(to left, #dcfce7, #bbf7d0); font-weight: bold; font-size: 18px; }
+          .green { color: #16a34a; }
+          .red { color: #dc2626; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div class="title">قائمة الدخل</div>
+          <div class="date">Income Statement - ${selectedYear}</div>
+        </div>
+        
+        <table>
+          <tbody>
+            <tr><td colspan="2" style="font-weight: bold;">الإيرادات</td></tr>
+            ${incomeStatementData.revenue.map(item => `
+              <tr><td>${item.name}</td><td class="green">${formatNumber(item.amount)}</td></tr>
+            `).join('')}
+            <tr class="total-row">
+              <td>إجمالي الإيرادات</td>
+              <td class="green">${formatNumber(incomeStatementData.revenue.reduce((s, a) => s + a.amount, 0))}</td>
+            </tr>
+            
+            <tr><td colspan="2" style="font-weight: bold; padding-top: 15px;">تكلفة المبيعات</td></tr>
+            ${incomeStatementData.costOfSales.map(item => `
+              <tr><td>${item.name}</td><td class="red">(${formatNumber(item.amount)})</td></tr>
+            `).join('')}
+            
+            <tr class="profit">
+              <td>إجمالي الربح</td>
+              <td>${formatNumber(incomeStatementData.grossProfit)}</td>
+            </tr>
+            
+            <tr><td colspan="2" style="font-weight: bold; padding-top: 15px;">المصروفات</td></tr>
+            ${incomeStatementData.expenses.map(item => `
+              <tr><td>${item.name}</td><td class="red">(${formatNumber(item.amount)})</td></tr>
+            `).join('')}
+            <tr class="total-row">
+              <td>إجمالي المصروفات</td>
+              <td class="red">(${formatNumber(incomeStatementData.expenses.reduce((s, a) => s + a.amount, 0))})</td>
+            </tr>
+            
+            <tr class="net-profit">
+              <td>صافي الربح</td>
+              <td class="green">${formatNumber(incomeStatementData.netProfit)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </body>
+      </html>
+    `
+  }
+
+  // توليد محتوى طباعة قائمة التدفقات النقدية
+  const generateCashFlowPrint = () => {
+    return `
+      <!DOCTYPE html>
+      <html dir="rtl" lang="ar">
+      <head>
+        <meta charset="UTF-8">
+        <title>قائمة التدفقات النقدية</title>
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { font-family: Arial, sans-serif; padding: 20px; direction: rtl; }
+          .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 20px; }
+          .title { font-size: 24px; font-weight: bold; }
+          .date { font-size: 14px; margin-top: 10px; color: #666; }
+          .section { margin: 20px 0; }
+          table { width: 100%; border-collapse: collapse; }
+          td { padding: 8px; text-align: right; }
+          td:last-child { text-align: left; font-family: monospace; }
+          .total-row { background: #f3f4f6; font-weight: bold; }
+          .green { color: #16a34a; }
+          .red { color: #dc2626; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div class="title">قائمة التدفقات النقدية</div>
+          <div class="date">Cash Flow Statement - ${selectedYear}</div>
+        </div>
+        
+        <table>
+          <tbody>
+            <tr><td colspan="2" style="font-weight: bold;">أنشطة تشغيلية</td></tr>
+            ${cashFlowData.operating.map(item => `
+              <tr><td>${item.name}</td><td class="${item.amount >= 0 ? 'green' : 'red'}">${item.amount >= 0 ? '' : '('}${formatNumber(Math.abs(item.amount))}${item.amount >= 0 ? '' : ')'}</td></tr>
+            `).join('')}
+            
+            <tr><td colspan="2" style="font-weight: bold; padding-top: 15px;">أنشطة استثمارية</td></tr>
+            ${cashFlowData.investing.map(item => `
+              <tr><td>${item.name}</td><td class="red">(${formatNumber(Math.abs(item.amount))})</td></tr>
+            `).join('')}
+            
+            <tr><td colspan="2" style="font-weight: bold; padding-top: 15px;">أنشطة تمويلية</td></tr>
+            ${cashFlowData.financing.map(item => `
+              <tr><td>${item.name}</td><td class="red">(${formatNumber(Math.abs(item.amount))})</td></tr>
+            `).join('')}
+            
+            <tr class="total-row">
+              <td>صافي التغير في النقدية</td>
+              <td class="green">${formatNumber(cashFlowData.netChange)}</td>
+            </tr>
+            <tr class="total-row">
+              <td>رصيد الافتتاح</td>
+              <td>${formatNumber(cashFlowData.openingBalance)}</td>
+            </tr>
+            <tr class="total-row" style="background: #e9d5ff;">
+              <td>رصيد الإقفال</td>
+              <td>${formatNumber(cashFlowData.closingBalance)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </body>
+      </html>
+    `
   }
 
   // فتح نافذة كشف الحساب
   const handleOpenAccountStatement = () => {
     setAccountStatementOpen(true)
     setSelectedAccountId('')
+    setSelectedAccountName('')
+    setAccountSearch('')
     setDateFrom('')
     setDateTo('')
     setAccountTransactions([])
+  }
+
+  // تصفية الحسابات حسب البحث
+  const getFilteredAccounts = () => {
+    const accountList = accountType === 'CUSTOMER' ? customers : suppliers
+    return accountList.filter(account => 
+      account.name.includes(accountSearch) ||
+      account.id.toLowerCase().includes(accountSearch.toLowerCase()) ||
+      account.phone.includes(accountSearch)
+    )
+  }
+
+  // اختيار حساب
+  const handleSelectAccount = (account: typeof customers[0] | typeof suppliers[0]) => {
+    setSelectedAccountId(account.id)
+    setSelectedAccountName(account.name)
+    setAccountSearch(`${account.id} - ${account.name}`)
+    setShowAccountDropdown(false)
   }
 
   // توليد كشف الحساب
@@ -159,7 +455,6 @@ export default function FinancialReportsManagement() {
 
     setLoadingStatement(true)
     
-    // محاكاة API call
     await new Promise(resolve => setTimeout(resolve, 1000))
 
     const account = accountType === 'CUSTOMER' 
@@ -251,6 +546,140 @@ export default function FinancialReportsManagement() {
     toast.success('تم توليد كشف الحساب')
   }
 
+  // طباعة كشف الحساب
+  const handlePrintAccountStatement = () => {
+    if (accountTransactions.length === 0) return
+
+    const totalDebit = accountTransactions.reduce((sum, t) => sum + t.debit, 0)
+    const totalCredit = accountTransactions.reduce((sum, t) => sum + t.credit, 0)
+    const finalBalance = accountTransactions[accountTransactions.length - 1].balance
+
+    const printContent = `
+      <!DOCTYPE html>
+      <html dir="rtl" lang="ar">
+      <head>
+        <meta charset="UTF-8">
+        <title>كشف حساب - ${selectedAccountName}</title>
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { font-family: Arial, sans-serif; padding: 20px; direction: rtl; }
+          .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 20px; }
+          .title { font-size: 24px; font-weight: bold; }
+          .account-info { margin: 20px 0; padding: 15px; background: #f3f4f6; border-radius: 8px; }
+          .account-info p { margin: 5px 0; }
+          table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+          th, td { border: 1px solid #ddd; padding: 10px; text-align: right; }
+          th { background: #f3f4f6; }
+          td:nth-child(5), td:nth-child(6), td:nth-child(7) { text-align: left; font-family: monospace; }
+          .total-row { background: #f3f4f6; font-weight: bold; }
+          .green { color: #16a34a; }
+          .red { color: #dc2626; }
+          .summary { margin-top: 30px; display: flex; justify-content: space-around; }
+          .summary-box { text-align: center; padding: 15px 30px; background: #f3f4f6; border-radius: 8px; }
+          .summary-box .label { font-size: 12px; color: #666; }
+          .summary-box .value { font-size: 20px; font-weight: bold; margin-top: 5px; }
+          .footer { margin-top: 50px; display: flex; justify-content: space-between; }
+          .signature { text-align: center; width: 200px; }
+          .signature-line { border-top: 1px solid #333; margin-top: 50px; padding-top: 10px; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div class="title">كشف حساب</div>
+          <div style="font-size: 14px; color: #666;">Account Statement</div>
+        </div>
+        
+        <div class="account-info">
+          <p><strong>نوع الحساب:</strong> ${accountType === 'CUSTOMER' ? 'عميل' : 'مورد'}</p>
+          <p><strong>اسم الحساب:</strong> ${selectedAccountName}</p>
+          <p><strong>رقم الحساب:</strong> ${selectedAccountId}</p>
+          ${dateFrom || dateTo ? `<p><strong>الفترة:</strong> ${dateFrom ? formatDate(dateFrom) : '...'} - ${dateTo ? formatDate(dateTo) : '...'}</p>` : ''}
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>التاريخ</th>
+              <th>النوع</th>
+              <th>المرجع</th>
+              <th>البيان</th>
+              <th>مدين</th>
+              <th>دائن</th>
+              <th>الرصيد</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${accountTransactions.map(t => `
+              <tr>
+                <td style="font-family: monospace;">${formatDate(t.date)}</td>
+                <td>${getTransactionTypeLabel(t.type)}</td>
+                <td style="font-family: monospace;">${t.reference}</td>
+                <td>${t.description}</td>
+                <td class="green">${t.debit > 0 ? formatNumber(t.debit) : '-'}</td>
+                <td class="red">${t.credit > 0 ? formatNumber(t.credit) : '-'}</td>
+                <td style="color: ${t.balance >= 0 ? '#16a34a' : '#dc2626'}; font-weight: bold;">${formatNumber(t.balance)}</td>
+              </tr>
+            `).join('')}
+            <tr class="total-row">
+              <td colspan="4">الإجمالي</td>
+              <td class="green">${formatNumber(totalDebit)}</td>
+              <td class="red">${formatNumber(totalCredit)}</td>
+              <td style="color: ${finalBalance >= 0 ? '#16a34a' : '#dc2626'};">${formatNumber(finalBalance)}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="summary">
+          <div class="summary-box">
+            <div class="label">إجمالي المدين</div>
+            <div class="value green">${formatNumber(totalDebit)}</div>
+          </div>
+          <div class="summary-box">
+            <div class="label">إجمالي الدائن</div>
+            <div class="value red">${formatNumber(totalCredit)}</div>
+          </div>
+          <div class="summary-box">
+            <div class="label">الرصيد النهائي</div>
+            <div class="value" style="color: ${finalBalance >= 0 ? '#16a34a' : '#dc2626'};">${formatNumber(finalBalance)}</div>
+          </div>
+        </div>
+
+        <div class="footer">
+          <div class="signature">
+            <div class="signature-line">المحاسب</div>
+          </div>
+          <div class="signature">
+            <div class="signature-line">المراجع</div>
+          </div>
+          <div class="signature">
+            <div class="signature-line">المدير المالي</div>
+          </div>
+        </div>
+      </body>
+      </html>
+    `
+
+    const printWindow = window.open('', '_blank')
+    if (printWindow) {
+      printWindow.document.write(printContent)
+      printWindow.document.close()
+      printWindow.print()
+    }
+  }
+
+  // تسمية نوع الحركة
+  const getTransactionTypeLabel = (type: string): string => {
+    const labels: Record<string, string> = {
+      INVOICE: 'فاتورة',
+      PAYMENT: 'سند صرف',
+      RECEIPT: 'سند قبض',
+      CREDIT_NOTE: 'إشعار دائن',
+      DEBIT_NOTE: 'إشعار مدين',
+      OPENING: 'رصيد افتتاحي',
+    }
+    return labels[type] || type
+  }
+
   // حساب إجمالي المدين والدائن
   const totalDebit = accountTransactions.reduce((sum, t) => sum + t.debit, 0)
   const totalCredit = accountTransactions.reduce((sum, t) => sum + t.credit, 0)
@@ -271,7 +700,7 @@ export default function FinancialReportsManagement() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between print:hidden">
         <div className="flex items-center gap-3">
           <div className="h-12 w-12 rounded-xl bg-teal-500/10 flex items-center justify-center">
             <BarChart3 className="h-6 w-6 text-teal-500" />
@@ -298,7 +727,7 @@ export default function FinancialReportsManagement() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-4">
+      <div className="flex flex-wrap gap-4 print:hidden">
         <Select value={selectedYear} onValueChange={setSelectedYear}>
           <SelectTrigger className="w-[150px]">
             <SelectValue placeholder="السنة" />
@@ -326,7 +755,7 @@ export default function FinancialReportsManagement() {
 
       {/* Report Tabs */}
       <Tabs value={activeReport} onValueChange={setActiveReport}>
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-3 print:hidden">
           <TabsTrigger value="balance-sheet">الميزانية العمومية</TabsTrigger>
           <TabsTrigger value="income-statement">قائمة الدخل</TabsTrigger>
           <TabsTrigger value="cash-flow">قائمة التدفقات النقدية</TabsTrigger>
@@ -353,13 +782,13 @@ export default function FinancialReportsManagement() {
                         {balanceSheetData.assets.current.map((item, idx) => (
                           <TableRow key={idx}>
                             <TableCell>{item.name}</TableCell>
-                            <TableCell className="text-left font-mono">{item.amount.toLocaleString('ar-EG')}</TableCell>
+                            <TableCell className="text-left font-mono">{formatNumber(item.amount)}</TableCell>
                           </TableRow>
                         ))}
                         <TableRow className="bg-muted/50">
                           <TableCell className="font-medium">إجمالي الأصول المتداولة</TableCell>
                           <TableCell className="text-left font-mono font-bold">
-                            {balanceSheetData.assets.current.reduce((sum, a) => sum + a.amount, 0).toLocaleString('ar-EG')}
+                            {formatNumber(balanceSheetData.assets.current.reduce((sum, a) => sum + a.amount, 0))}
                           </TableCell>
                         </TableRow>
                       </TableBody>
@@ -377,13 +806,13 @@ export default function FinancialReportsManagement() {
                             <TableCell className={cn(
                               "text-left font-mono",
                               item.amount < 0 && 'text-red-600'
-                            )}>{item.amount.toLocaleString('ar-EG')}</TableCell>
+                            )}>{formatNumber(item.amount)}</TableCell>
                           </TableRow>
                         ))}
                         <TableRow className="bg-muted/50">
                           <TableCell className="font-medium">إجمالي الأصول الثابتة</TableCell>
                           <TableCell className="text-left font-mono font-bold">
-                            {balanceSheetData.assets.fixed.reduce((sum, a) => sum + a.amount, 0).toLocaleString('ar-EG')}
+                            {formatNumber(balanceSheetData.assets.fixed.reduce((sum, a) => sum + a.amount, 0))}
                           </TableCell>
                         </TableRow>
                       </TableBody>
@@ -394,7 +823,7 @@ export default function FinancialReportsManagement() {
                   <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-lg flex justify-between items-center">
                     <span className="font-bold text-green-700 dark:text-green-400">إجمالي الأصول</span>
                     <span className="font-mono font-bold text-green-700 dark:text-green-400">
-                      {balanceSheetData.assets.total.toLocaleString('ar-EG')} ج.م
+                      {formatNumber(balanceSheetData.assets.total)} ج.م
                     </span>
                   </div>
                 </div>
@@ -419,7 +848,7 @@ export default function FinancialReportsManagement() {
                         {balanceSheetData.liabilities.current.map((item, idx) => (
                           <TableRow key={idx}>
                             <TableCell>{item.name}</TableCell>
-                            <TableCell className="text-left font-mono">{item.amount.toLocaleString('ar-EG')}</TableCell>
+                            <TableCell className="text-left font-mono">{formatNumber(item.amount)}</TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
@@ -434,13 +863,13 @@ export default function FinancialReportsManagement() {
                         {balanceSheetData.liabilities.longTerm.map((item, idx) => (
                           <TableRow key={idx}>
                             <TableCell>{item.name}</TableCell>
-                            <TableCell className="text-left font-mono">{item.amount.toLocaleString('ar-EG')}</TableCell>
+                            <TableCell className="text-left font-mono">{formatNumber(item.amount)}</TableCell>
                           </TableRow>
                         ))}
                         <TableRow className="bg-muted/50">
                           <TableCell className="font-medium">إجمالي الخصوم</TableCell>
                           <TableCell className="text-left font-mono font-bold">
-                            {balanceSheetData.liabilities.total.toLocaleString('ar-EG')}
+                            {formatNumber(balanceSheetData.liabilities.total)}
                           </TableCell>
                         </TableRow>
                       </TableBody>
@@ -455,13 +884,13 @@ export default function FinancialReportsManagement() {
                         {balanceSheetData.equity.items.map((item, idx) => (
                           <TableRow key={idx}>
                             <TableCell>{item.name}</TableCell>
-                            <TableCell className="text-left font-mono">{item.amount.toLocaleString('ar-EG')}</TableCell>
+                            <TableCell className="text-left font-mono">{formatNumber(item.amount)}</TableCell>
                           </TableRow>
                         ))}
                         <TableRow className="bg-muted/50">
                           <TableCell className="font-medium">إجمالي حقوق الملكية</TableCell>
                           <TableCell className="text-left font-mono font-bold">
-                            {balanceSheetData.equity.total.toLocaleString('ar-EG')}
+                            {formatNumber(balanceSheetData.equity.total)}
                           </TableCell>
                         </TableRow>
                       </TableBody>
@@ -472,7 +901,7 @@ export default function FinancialReportsManagement() {
                   <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-lg flex justify-between items-center">
                     <span className="font-bold text-red-700 dark:text-red-400">إجمالي الخصوم وحقوق الملكية</span>
                     <span className="font-mono font-bold text-red-700 dark:text-red-400">
-                      {(balanceSheetData.liabilities.total + balanceSheetData.equity.total).toLocaleString('ar-EG')} ج.م
+                      {formatNumber(balanceSheetData.liabilities.total + balanceSheetData.equity.total)} ج.م
                     </span>
                   </div>
                 </div>
@@ -500,13 +929,13 @@ export default function FinancialReportsManagement() {
                       {incomeStatementData.revenue.map((item, idx) => (
                         <TableRow key={idx}>
                           <TableCell>{item.name}</TableCell>
-                          <TableCell className="text-left font-mono text-green-600">{item.amount.toLocaleString('ar-EG')}</TableCell>
+                          <TableCell className="text-left font-mono text-green-600">{formatNumber(item.amount)}</TableCell>
                         </TableRow>
                       ))}
                       <TableRow className="bg-green-50 dark:bg-green-900/20">
                         <TableCell className="font-medium">إجمالي الإيرادات</TableCell>
                         <TableCell className="text-left font-mono font-bold text-green-600">
-                          {incomeStatementData.revenue.reduce((sum, a) => sum + a.amount, 0).toLocaleString('ar-EG')}
+                          {formatNumber(incomeStatementData.revenue.reduce((sum, a) => sum + a.amount, 0))}
                         </TableCell>
                       </TableRow>
                     </TableBody>
@@ -521,7 +950,7 @@ export default function FinancialReportsManagement() {
                       {incomeStatementData.costOfSales.map((item, idx) => (
                         <TableRow key={idx}>
                           <TableCell>{item.name}</TableCell>
-                          <TableCell className="text-left font-mono text-red-600">({item.amount.toLocaleString('ar-EG')})</TableCell>
+                          <TableCell className="text-left font-mono text-red-600">({formatNumber(item.amount)})</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -532,7 +961,7 @@ export default function FinancialReportsManagement() {
                 <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex justify-between items-center">
                   <span className="font-bold text-blue-700 dark:text-blue-400">إجمالي الربح</span>
                   <span className="font-mono font-bold text-blue-700 dark:text-blue-400">
-                    {incomeStatementData.grossProfit.toLocaleString('ar-EG')} ج.م
+                    {formatNumber(incomeStatementData.grossProfit)} ج.م
                   </span>
                 </div>
 
@@ -544,13 +973,13 @@ export default function FinancialReportsManagement() {
                       {incomeStatementData.expenses.map((item, idx) => (
                         <TableRow key={idx}>
                           <TableCell>{item.name}</TableCell>
-                          <TableCell className="text-left font-mono text-red-600">({item.amount.toLocaleString('ar-EG')})</TableCell>
+                          <TableCell className="text-left font-mono text-red-600">({formatNumber(item.amount)})</TableCell>
                         </TableRow>
                       ))}
                       <TableRow className="bg-red-50 dark:bg-red-900/20">
                         <TableCell className="font-medium">إجمالي المصروفات</TableCell>
                         <TableCell className="text-left font-mono font-bold text-red-600">
-                          ({incomeStatementData.expenses.reduce((sum, a) => sum + a.amount, 0).toLocaleString('ar-EG')})
+                          ({formatNumber(incomeStatementData.expenses.reduce((sum, a) => sum + a.amount, 0))})
                         </TableCell>
                       </TableRow>
                     </TableBody>
@@ -561,7 +990,7 @@ export default function FinancialReportsManagement() {
                 <div className="p-4 bg-gradient-to-l from-green-100 to-emerald-100 dark:from-green-900/30 dark:to-emerald-900/30 rounded-lg flex justify-between items-center">
                   <span className="font-bold text-xl text-green-700 dark:text-green-400">صافي الربح</span>
                   <span className="font-mono font-bold text-2xl text-green-700 dark:text-green-400">
-                    {incomeStatementData.netProfit.toLocaleString('ar-EG')} ج.م
+                    {formatNumber(incomeStatementData.netProfit)} ج.م
                   </span>
                 </div>
               </div>
@@ -592,7 +1021,7 @@ export default function FinancialReportsManagement() {
                             "text-left font-mono",
                             item.amount >= 0 ? 'text-green-600' : 'text-red-600'
                           )}>
-                            {item.amount >= 0 ? '' : '('}{Math.abs(item.amount).toLocaleString('ar-EG')}{item.amount >= 0 ? '' : ')'}
+                            {item.amount >= 0 ? '' : '('}{formatNumber(Math.abs(item.amount))}{item.amount >= 0 ? '' : ')'}
                           </TableCell>
                         </TableRow>
                       ))}
@@ -609,7 +1038,7 @@ export default function FinancialReportsManagement() {
                         <TableRow key={idx}>
                           <TableCell>{item.name}</TableCell>
                           <TableCell className="text-left font-mono text-red-600">
-                            ({Math.abs(item.amount).toLocaleString('ar-EG')})
+                            ({formatNumber(Math.abs(item.amount))})
                           </TableCell>
                         </TableRow>
                       ))}
@@ -626,7 +1055,7 @@ export default function FinancialReportsManagement() {
                         <TableRow key={idx}>
                           <TableCell>{item.name}</TableCell>
                           <TableCell className="text-left font-mono text-red-600">
-                            ({Math.abs(item.amount).toLocaleString('ar-EG')})
+                            ({formatNumber(Math.abs(item.amount))})
                           </TableCell>
                         </TableRow>
                       ))}
@@ -639,17 +1068,17 @@ export default function FinancialReportsManagement() {
                   <div className="p-3 bg-muted rounded-lg flex justify-between items-center">
                     <span className="font-medium">صافي التغير في النقدية</span>
                     <span className="font-mono font-bold text-green-600">
-                      {cashFlowData.netChange.toLocaleString('ar-EG')} ج.م
+                      {formatNumber(cashFlowData.netChange)} ج.م
                     </span>
                   </div>
                   <div className="p-3 bg-muted rounded-lg flex justify-between items-center">
                     <span className="font-medium">رصيد الافتتاح</span>
-                    <span className="font-mono">{cashFlowData.openingBalance.toLocaleString('ar-EG')} ج.م</span>
+                    <span className="font-mono">{formatNumber(cashFlowData.openingBalance)} ج.م</span>
                   </div>
                   <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex justify-between items-center">
                     <span className="font-bold text-purple-700 dark:text-purple-400">رصيد الإقفال</span>
                     <span className="font-mono font-bold text-purple-700 dark:text-purple-400">
-                      {cashFlowData.closingBalance.toLocaleString('ar-EG')} ج.م
+                      {formatNumber(cashFlowData.closingBalance)} ج.م
                     </span>
                   </div>
                 </div>
@@ -679,7 +1108,7 @@ export default function FinancialReportsManagement() {
                   "h-16 flex-col gap-1",
                   accountType === 'CUSTOMER' && "bg-blue-600 hover:bg-blue-700"
                 )}
-                onClick={() => { setAccountType('CUSTOMER'); setSelectedAccountId(''); }}
+                onClick={() => { setAccountType('CUSTOMER'); setSelectedAccountId(''); setAccountSearch(''); }}
               >
                 <Users className="h-5 w-5" />
                 <span>عميل</span>
@@ -691,34 +1120,77 @@ export default function FinancialReportsManagement() {
                   "h-16 flex-col gap-1",
                   accountType === 'SUPPLIER' && "bg-orange-600 hover:bg-orange-700"
                 )}
-                onClick={() => { setAccountType('SUPPLIER'); setSelectedAccountId(''); }}
+                onClick={() => { setAccountType('SUPPLIER'); setSelectedAccountId(''); setAccountSearch(''); }}
               >
                 <Building2 className="h-5 w-5" />
                 <span>مورد</span>
               </Button>
             </div>
 
-            {/* اختيار الحساب */}
+            {/* بحث الحساب */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="md:col-span-2">
+              <div className="md:col-span-2" ref={accountDropdownRef}>
                 <Label>{accountType === 'CUSTOMER' ? 'العميل' : 'المورد'}</Label>
-                <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder={`اختر ${accountType === 'CUSTOMER' ? 'العميل' : 'المورد'}`} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(accountType === 'CUSTOMER' ? customers : suppliers).map((account) => (
-                      <SelectItem key={account.id} value={account.id}>
-                        <div className="flex items-center justify-between w-full">
-                          <span>{account.name}</span>
-                          <span className="text-muted-foreground mr-2">
-                            (رصيد: {account.balance.toLocaleString('ar-EG')} ج.م)
-                          </span>
+                <div className="relative">
+                  <Input
+                    placeholder={`ابحث عن ${accountType === 'CUSTOMER' ? 'العميل' : 'المورد'} بالاسم أو الكود...`}
+                    value={accountSearch}
+                    onChange={(e) => {
+                      setAccountSearch(e.target.value)
+                      setShowAccountDropdown(true)
+                      if (!e.target.value) {
+                        setSelectedAccountId('')
+                        setSelectedAccountName('')
+                      }
+                    }}
+                    onFocus={() => setShowAccountDropdown(true)}
+                    className="pr-10"
+                  />
+                  <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  {selectedAccountId && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute left-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
+                      onClick={() => {
+                        setAccountSearch('')
+                        setSelectedAccountId('')
+                        setSelectedAccountName('')
+                      }}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                  
+                  {/* القائمة المنسدلة */}
+                  {showAccountDropdown && accountSearch && (
+                    <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-950 border rounded-md shadow-lg max-h-60 overflow-y-auto">
+                      {getFilteredAccounts().length > 0 ? (
+                        getFilteredAccounts().map((account) => (
+                          <div
+                            key={account.id}
+                            className="px-3 py-2 hover:bg-muted cursor-pointer"
+                            onClick={() => handleSelectAccount(account)}
+                          >
+                            <div className="flex justify-between items-center">
+                              <span>{account.name}</span>
+                              <span className="text-muted-foreground text-sm font-mono">{account.id}</span>
+                            </div>
+                            <div className="flex justify-between items-center text-xs text-muted-foreground">
+                              <span>{account.phone}</span>
+                              <span>رصيد: {formatNumber(account.balance)} ج.م</span>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="px-3 py-2 text-muted-foreground text-center">
+                          لا توجد نتائج
                         </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
               <div className="flex items-end">
                 <Button 
@@ -771,17 +1243,15 @@ export default function FinancialReportsManagement() {
                       <p className="text-sm text-muted-foreground">
                         {accountType === 'CUSTOMER' ? 'العميل' : 'المورد'}
                       </p>
-                      <p className="font-bold text-lg">
-                        {(accountType === 'CUSTOMER' ? customers : suppliers).find(a => a.id === selectedAccountId)?.name}
-                      </p>
+                      <p className="font-bold text-lg">{selectedAccountName}</p>
                     </div>
                     <div className="text-left">
                       <p className="text-sm text-muted-foreground">الرصيد الحالي</p>
                       <p className={cn(
-                        "font-bold text-xl",
+                        "font-bold text-xl font-mono",
                         finalBalance >= 0 ? 'text-green-600' : 'text-red-600'
                       )}>
-                        {finalBalance.toLocaleString('ar-EG')} ج.م
+                        {formatNumber(finalBalance)} ج.م
                       </p>
                     </div>
                   </div>
@@ -806,7 +1276,7 @@ export default function FinancialReportsManagement() {
                         {accountTransactions.map((transaction) => (
                           <TableRow key={transaction.id}>
                             <TableCell className="font-mono text-sm">
-                              {new Date(transaction.date).toLocaleDateString('ar-EG')}
+                              {formatDate(transaction.date)}
                             </TableCell>
                             <TableCell>
                               <Badge className={transactionTypeLabels[transaction.type].color}>
@@ -820,16 +1290,16 @@ export default function FinancialReportsManagement() {
                               {transaction.description}
                             </TableCell>
                             <TableCell className="text-left font-mono text-green-600">
-                              {transaction.debit > 0 ? transaction.debit.toLocaleString('ar-EG') : '-'}
+                              {transaction.debit > 0 ? formatNumber(transaction.debit) : '-'}
                             </TableCell>
                             <TableCell className="text-left font-mono text-red-600">
-                              {transaction.credit > 0 ? transaction.credit.toLocaleString('ar-EG') : '-'}
+                              {transaction.credit > 0 ? formatNumber(transaction.credit) : '-'}
                             </TableCell>
                             <TableCell className={cn(
                               "text-left font-mono font-medium",
                               transaction.balance >= 0 ? 'text-green-600' : 'text-red-600'
                             )}>
-                              {transaction.balance.toLocaleString('ar-EG')}
+                              {formatNumber(transaction.balance)}
                             </TableCell>
                           </TableRow>
                         ))}
@@ -837,16 +1307,16 @@ export default function FinancialReportsManagement() {
                         <TableRow className="bg-muted/50 font-bold">
                           <TableCell colSpan={4}>الإجمالي</TableCell>
                           <TableCell className="text-left font-mono text-green-600">
-                            {totalDebit.toLocaleString('ar-EG')}
+                            {formatNumber(totalDebit)}
                           </TableCell>
                           <TableCell className="text-left font-mono text-red-600">
-                            {totalCredit.toLocaleString('ar-EG')}
+                            {formatNumber(totalCredit)}
                           </TableCell>
                           <TableCell className={cn(
                             "text-left font-mono",
                             finalBalance >= 0 ? 'text-green-600' : 'text-red-600'
                           )}>
-                            {finalBalance.toLocaleString('ar-EG')}
+                            {formatNumber(finalBalance)}
                           </TableCell>
                         </TableRow>
                       </TableBody>
@@ -865,7 +1335,7 @@ export default function FinancialReportsManagement() {
                         <div>
                           <p className="text-xs text-muted-foreground">إجمالي المدين</p>
                           <p className="text-xl font-bold text-green-600 font-mono">
-                            {totalDebit.toLocaleString('ar-EG')}
+                            {formatNumber(totalDebit)}
                           </p>
                         </div>
                       </div>
@@ -880,7 +1350,7 @@ export default function FinancialReportsManagement() {
                         <div>
                           <p className="text-xs text-muted-foreground">إجمالي الدائن</p>
                           <p className="text-xl font-bold text-red-600 font-mono">
-                            {totalCredit.toLocaleString('ar-EG')}
+                            {formatNumber(totalCredit)}
                           </p>
                         </div>
                       </div>
@@ -898,7 +1368,7 @@ export default function FinancialReportsManagement() {
                             "text-xl font-bold font-mono",
                             finalBalance >= 0 ? 'text-green-600' : 'text-red-600'
                           )}>
-                            {finalBalance.toLocaleString('ar-EG')}
+                            {formatNumber(finalBalance)}
                           </p>
                         </div>
                       </div>
@@ -909,10 +1379,10 @@ export default function FinancialReportsManagement() {
             )}
 
             {/* رسالة فارغة */}
-            {accountTransactions.length === 0 && selectedAccountId && (
+            {accountTransactions.length === 0 && !loadingStatement && (
               <div className="text-center py-8 text-muted-foreground">
                 <FileText className="h-12 w-12 mx-auto mb-4 opacity-30" />
-                <p>اضغط "عرض الكشف" لعرض حركات الحساب</p>
+                <p>ابحث عن {accountType === 'CUSTOMER' ? 'العميل' : 'المورد'} واضغط "عرض الكشف"</p>
               </div>
             )}
           </div>
@@ -927,7 +1397,7 @@ export default function FinancialReportsManagement() {
                   <FileSpreadsheet className="h-4 w-4 ml-2" />
                   Excel
                 </Button>
-                <Button onClick={() => toast.success('جاري الطباعة...')}>
+                <Button onClick={handlePrintAccountStatement}>
                   <Printer className="h-4 w-4 ml-2" />
                   طباعة
                 </Button>

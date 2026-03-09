@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -14,7 +14,7 @@ import { Label } from '@/components/ui/label'
 import { 
   Plus, Search, Loader2, Edit, Trash2, FileText, 
   Calendar, DollarSign, Printer, Eye, ArrowUpCircle, ArrowDownCircle,
-  CheckCircle, AlertCircle
+  CheckCircle, AlertCircle, X
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
@@ -94,6 +94,17 @@ const generateVoucherNumber = (vouchers: Voucher[], type: 'RECEIPT' | 'PAYMENT')
 // توليد ID فريد
 const generateId = () => `voucher_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 
+// تنسيق الأرقام بالإنجليزية
+const formatNumber = (num: number): string => {
+  return num.toLocaleString('en-US')
+}
+
+// تنسيق التاريخ بالإنجليزية
+const formatDate = (dateStr: string): string => {
+  const date = new Date(dateStr)
+  return date.toLocaleDateString('en-CA')
+}
+
 export default function VouchersManagement() {
   const [vouchers, setVouchers] = useState<Voucher[]>([])
   const [loading, setLoading] = useState(true)
@@ -102,6 +113,11 @@ export default function VouchersManagement() {
   const [selectedVoucher, setSelectedVoucher] = useState<Voucher | null>(null)
   const [activeTab, setActiveTab] = useState('all')
   const [isCreating, setIsCreating] = useState(false)
+
+  // البحث عن الحسابات
+  const [accountSearch, setAccountSearch] = useState('')
+  const [showAccountDropdown, setShowAccountDropdown] = useState(false)
+  const accountDropdownRef = useRef<HTMLDivElement>(null)
 
   // فورم السند الجديد
   const [formData, setFormData] = useState({
@@ -123,10 +139,20 @@ export default function VouchersManagement() {
     fetchVouchers()
   }, [])
 
+  // إغلاق القائمة المنسدلة عند النقر خارجها
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (accountDropdownRef.current && !accountDropdownRef.current.contains(event.target as Node)) {
+        setShowAccountDropdown(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
   const fetchVouchers = async () => {
     try {
       setLoading(true)
-      // محاكاة API call - البيانات فارغة في البداية
       await new Promise(resolve => setTimeout(resolve, 500))
       setVouchers([])
     } catch (error) {
@@ -136,9 +162,16 @@ export default function VouchersManagement() {
     }
   }
 
+  // تصفية الحسابات حسب البحث
+  const filteredAccounts = accounts.filter(account => 
+    account.name.includes(accountSearch) ||
+    account.code.includes(accountSearch)
+  )
+
   // فتح نافذة سند جديد
   const handleOpenNewVoucher = () => {
     setSelectedVoucher(null)
+    setAccountSearch('')
     setFormData({
       type: 'RECEIPT',
       date: new Date().toISOString().split('T')[0],
@@ -162,22 +195,20 @@ export default function VouchersManagement() {
     setDialogOpen(true)
   }
 
-  // تحديث الحساب
-  const handleAccountChange = (accountId: string) => {
-    const account = accounts.find(a => a.id === accountId)
-    if (account) {
-      setFormData({
-        ...formData,
-        accountId: account.id,
-        accountName: account.name,
-        accountCode: account.code,
-      })
-    }
+  // اختيار حساب
+  const handleSelectAccount = (account: typeof accounts[0]) => {
+    setFormData({
+      ...formData,
+      accountId: account.id,
+      accountName: account.name,
+      accountCode: account.code,
+    })
+    setAccountSearch(`${account.code} - ${account.name}`)
+    setShowAccountDropdown(false)
   }
 
   // حفظ السند مع الترحيل التلقائي
   const handleSaveVoucher = async () => {
-    // التحقق من البيانات
     if (!formData.accountId) {
       toast.error('يرجى اختيار الحساب')
       return
@@ -193,7 +224,6 @@ export default function VouchersManagement() {
       return
     }
 
-    // التحقق من بيانات الشيك
     if (formData.paymentMethod === 'CHECK') {
       if (!formData.checkNumber || !formData.checkDate || !formData.bankName) {
         toast.error('يرجى إدخال بيانات الشيك كاملة')
@@ -204,7 +234,6 @@ export default function VouchersManagement() {
     setIsCreating(true)
 
     try {
-      // إنشاء السند الجديد مع الترحيل التلقائي
       const newVoucher: Voucher = {
         id: generateId(),
         voucherNumber: generateVoucherNumber(vouchers, formData.type),
@@ -216,7 +245,7 @@ export default function VouchersManagement() {
         accountCode: formData.accountCode,
         description: formData.description,
         reference: formData.reference || undefined,
-        status: 'POSTED', // الترحيل التلقائي
+        status: 'POSTED',
         paymentMethod: formData.paymentMethod,
         checkNumber: formData.paymentMethod === 'CHECK' ? formData.checkNumber : undefined,
         checkDate: formData.paymentMethod === 'CHECK' ? formData.checkDate : undefined,
@@ -225,16 +254,14 @@ export default function VouchersManagement() {
         createdBy: 'المستخدم الحالي',
       }
 
-      // إضافة السند للقائمة
       setVouchers([newVoucher, ...vouchers])
       
-      // إنشاء قيد محاسبي تلقائي
       const journalEntryNumber = `JE-${String(vouchers.length + 1).padStart(4, '0')}`
       
       toast.success(`تم إنشاء وترحيل السند ${newVoucher.voucherNumber} مع القيد ${journalEntryNumber}`)
       setDialogOpen(false)
       
-      // إعادة تعيين الفورم
+      setAccountSearch('')
       setFormData({
         type: 'RECEIPT',
         date: new Date().toISOString().split('T')[0],
@@ -268,7 +295,78 @@ export default function VouchersManagement() {
 
   // طباعة سند
   const handlePrintVoucher = (voucher: Voucher) => {
-    toast.success(`جاري طباعة السند ${voucher.voucherNumber}`)
+    const printContent = `
+      <!DOCTYPE html>
+      <html dir="rtl" lang="ar">
+      <head>
+        <meta charset="UTF-8">
+        <title>سند ${voucher.type === 'RECEIPT' ? 'قبض' : 'صرف'} - ${voucher.voucherNumber}</title>
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { font-family: Arial, sans-serif; padding: 20px; direction: rtl; }
+          .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 20px; }
+          .title { font-size: 24px; font-weight: bold; color: ${voucher.type === 'RECEIPT' ? '#16a34a' : '#dc2626'}; }
+          .voucher-number { font-size: 18px; margin-top: 10px; }
+          .content { margin: 20px 0; }
+          .row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee; }
+          .label { color: #666; }
+          .value { font-weight: bold; }
+          .amount-box { background: ${voucher.type === 'RECEIPT' ? '#dcfce7' : '#fee2e2'}; padding: 20px; text-align: center; margin: 20px 0; border-radius: 8px; }
+          .amount { font-size: 28px; font-weight: bold; color: ${voucher.type === 'RECEIPT' ? '#16a34a' : '#dc2626'}; }
+          .footer { margin-top: 50px; display: flex; justify-content: space-between; }
+          .signature { text-align: center; width: 200px; }
+          .signature-line { border-top: 1px solid #333; margin-top: 50px; padding-top: 10px; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div class="title">سند ${voucher.type === 'RECEIPT' ? 'قبض' : 'صرف'</div>
+          <div class="voucher-number">رقم: ${voucher.voucherNumber}</div>
+        </div>
+        <div class="content">
+          <div class="row">
+            <span class="label">التاريخ:</span>
+            <span class="value">${formatDate(voucher.date)}</span>
+          </div>
+          <div class="row">
+            <span class="label">الحساب:</span>
+            <span class="value">${voucher.accountCode} - ${voucher.accountName}</span>
+          </div>
+          <div class="row">
+            <span class="label">طريقة الدفع:</span>
+            <span class="value">${paymentMethodLabels[voucher.paymentMethod]}</span>
+          </div>
+          ${voucher.bankName ? `<div class="row"><span class="label">البنك:</span><span class="value">${voucher.bankName}</span></div>` : ''}
+          ${voucher.checkNumber ? `<div class="row"><span class="label">رقم الشيك:</span><span class="value">${voucher.checkNumber}</span></div>` : ''}
+          <div class="row">
+            <span class="label">البيان:</span>
+            <span class="value">${voucher.description}</span>
+          </div>
+          ${voucher.reference ? `<div class="row"><span class="label">المرجع:</span><span class="value">${voucher.reference}</span></div>` : ''}
+        </div>
+        <div class="amount-box">
+          <div class="amount">${formatNumber(voucher.amount)} ج.م</div>
+        </div>
+        <div class="footer">
+          <div class="signature">
+            <div class="signature-line">المستلم</div>
+          </div>
+          <div class="signature">
+            <div class="signature-line">المحاسب</div>
+          </div>
+          <div class="signature">
+            <div class="signature-line">المراجع</div>
+          </div>
+        </div>
+      </body>
+      </html>
+    `
+    const printWindow = window.open('', '_blank')
+    if (printWindow) {
+      printWindow.document.write(printContent)
+      printWindow.document.close()
+      printWindow.print()
+    }
   }
 
   // تصفية السندات
@@ -294,7 +392,7 @@ export default function VouchersManagement() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between print:hidden">
         <div className="flex items-center gap-3">
           <div className="h-12 w-12 rounded-xl bg-purple-500/10 flex items-center justify-center">
             <FileText className="h-6 w-6 text-purple-500" />
@@ -311,7 +409,7 @@ export default function VouchersManagement() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 print:hidden">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
@@ -320,7 +418,7 @@ export default function VouchersManagement() {
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">إجمالي المقبوضات</p>
-                <p className="text-xl font-bold text-green-600">{totalReceipts.toLocaleString('ar-EG')} ج.م</p>
+                <p className="text-xl font-bold text-green-600">{formatNumber(totalReceipts)} ج.م</p>
               </div>
             </div>
           </CardContent>
@@ -333,7 +431,7 @@ export default function VouchersManagement() {
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">إجمالي المدفوعات</p>
-                <p className="text-xl font-bold text-red-600">{totalPayments.toLocaleString('ar-EG')} ج.م</p>
+                <p className="text-xl font-bold text-red-600">{formatNumber(totalPayments)} ج.م</p>
               </div>
             </div>
           </CardContent>
@@ -367,7 +465,7 @@ export default function VouchersManagement() {
       </div>
 
       {/* Tabs and Search */}
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between print:hidden">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList>
             <TabsTrigger value="all">الكل</TabsTrigger>
@@ -388,14 +486,14 @@ export default function VouchersManagement() {
       </div>
 
       {/* Table */}
-      <Card>
+      <Card className="print:shadow-none print:border-0">
         <CardContent className="p-0">
           {loading ? (
-            <div className="flex items-center justify-center py-8">
+            <div className="flex items-center justify-center py-8 print:hidden">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
           ) : filteredVouchers.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+            <div className="flex flex-col items-center justify-center py-12 text-muted-foreground print:hidden">
               <FileText className="h-12 w-12 mb-4 opacity-30" />
               <p className="text-lg font-medium">لا توجد سندات</p>
               <p className="text-sm mb-4">ابدأ بإنشاء سند جديد</p>
@@ -415,7 +513,7 @@ export default function VouchersManagement() {
                   <TableHead>الحساب</TableHead>
                   <TableHead>طريقة الدفع</TableHead>
                   <TableHead>الحالة</TableHead>
-                  <TableHead>إجراءات</TableHead>
+                  <TableHead className="print:hidden">إجراءات</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -436,21 +534,21 @@ export default function VouchersManagement() {
                         {voucher.type === 'RECEIPT' ? 'قبض' : 'صرف'}
                       </Badge>
                     </TableCell>
-                    <TableCell>{new Date(voucher.date).toLocaleDateString('ar-EG')}</TableCell>
+                    <TableCell className="font-mono">{formatDate(voucher.date)}</TableCell>
                     <TableCell className={cn(
                       "font-mono font-medium",
                       voucher.type === 'RECEIPT' ? 'text-green-600' : 'text-red-600'
                     )}>
-                      {voucher.amount.toLocaleString('ar-EG')} ج.م
+                      {formatNumber(voucher.amount)} ج.م
                     </TableCell>
-                    <TableCell>{voucher.accountName}</TableCell>
+                    <TableCell>{voucher.accountCode} - {voucher.accountName}</TableCell>
                     <TableCell>{paymentMethodLabels[voucher.paymentMethod]}</TableCell>
                     <TableCell>
                       <Badge className={statusColors[voucher.status]}>
                         {statusLabels[voucher.status]}
                       </Badge>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="print:hidden">
                       <div className="flex items-center gap-1">
                         <Button size="icon" variant="ghost" onClick={(e) => { e.stopPropagation(); handleViewVoucher(voucher) }}>
                           <Eye className="h-4 w-4" />
@@ -509,15 +607,15 @@ export default function VouchersManagement() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-xs text-muted-foreground">التاريخ</p>
-                  <p className="font-medium">{new Date(selectedVoucher.date).toLocaleDateString('ar-EG')}</p>
+                  <p className="font-medium font-mono">{formatDate(selectedVoucher.date)}</p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">المبلغ</p>
                   <p className={cn(
-                    "font-bold text-lg",
+                    "font-bold text-lg font-mono",
                     selectedVoucher.type === 'RECEIPT' ? 'text-green-600' : 'text-red-600'
                   )}>
-                    {selectedVoucher.amount.toLocaleString('ar-EG')} ج.م
+                    {formatNumber(selectedVoucher.amount)} ج.م
                   </p>
                 </div>
                 <div>
@@ -548,7 +646,7 @@ export default function VouchersManagement() {
                   {selectedVoucher.checkDate && (
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">تاريخ الشيك</span>
-                      <span>{new Date(selectedVoucher.checkDate).toLocaleDateString('ar-EG')}</span>
+                      <span className="font-mono">{formatDate(selectedVoucher.checkDate)}</span>
                     </div>
                   )}
                 </div>
@@ -628,7 +726,7 @@ export default function VouchersManagement() {
                     placeholder="0"
                     value={formData.amount || ''}
                     onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 })}
-                    className="text-lg font-bold"
+                    className="text-lg font-bold font-mono"
                   />
                 </div>
                 <div>
@@ -637,25 +735,66 @@ export default function VouchersManagement() {
                     placeholder="مثال: INV-0001"
                     value={formData.reference}
                     onChange={(e) => setFormData({ ...formData, reference: e.target.value })}
+                    className="font-mono"
                   />
                 </div>
               </div>
 
-              {/* الحساب */}
-              <div>
+              {/* الحساب - بحث */}
+              <div ref={accountDropdownRef} className="relative">
                 <Label>الحساب</Label>
-                <Select value={formData.accountId} onValueChange={handleAccountChange}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="اختر الحساب" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {accounts.map((account) => (
-                      <SelectItem key={account.id} value={account.id}>
-                        {account.code} - {account.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="relative">
+                  <Input
+                    placeholder="ابحث عن حساب بالاسم أو الكود..."
+                    value={accountSearch}
+                    onChange={(e) => {
+                      setAccountSearch(e.target.value)
+                      setShowAccountDropdown(true)
+                      if (!e.target.value) {
+                        setFormData({ ...formData, accountId: '', accountName: '', accountCode: '' })
+                      }
+                    }}
+                    onFocus={() => setShowAccountDropdown(true)}
+                    className="pr-10"
+                  />
+                  <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  {formData.accountId && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute left-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
+                      onClick={() => {
+                        setAccountSearch('')
+                        setFormData({ ...formData, accountId: '', accountName: '', accountCode: '' })
+                      }}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+                
+                {/* القائمة المنسدلة */}
+                {showAccountDropdown && accountSearch && (
+                  <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-950 border rounded-md shadow-lg max-h-60 overflow-y-auto">
+                    {filteredAccounts.length > 0 ? (
+                      filteredAccounts.map((account) => (
+                        <div
+                          key={account.id}
+                          className="px-3 py-2 hover:bg-muted cursor-pointer flex justify-between items-center"
+                          onClick={() => handleSelectAccount(account)}
+                        >
+                          <span>{account.name}</span>
+                          <span className="text-muted-foreground font-mono text-sm">{account.code}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="px-3 py-2 text-muted-foreground text-center">
+                        لا توجد نتائج
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* طريقة الدفع */}
@@ -708,6 +847,7 @@ export default function VouchersManagement() {
                       placeholder="رقم الشيك"
                       value={formData.checkNumber}
                       onChange={(e) => setFormData({ ...formData, checkNumber: e.target.value })}
+                      className="font-mono"
                     />
                   </div>
                   <div>
@@ -749,10 +889,10 @@ export default function VouchersManagement() {
                     </span>
                   </div>
                   <div className={cn(
-                    "text-xl font-bold",
+                    "text-xl font-bold font-mono",
                     formData.type === 'RECEIPT' ? 'text-green-600' : 'text-red-600'
                   )}>
-                    {(formData.amount || 0).toLocaleString('ar-EG')} ج.م
+                    {formatNumber(formData.amount || 0)} ج.م
                   </div>
                 </div>
               </div>
