@@ -1,8 +1,8 @@
-// Service Worker for Aqsati ERP - v2.1.8
+// Service Worker for Aqsati ERP - v2.2.0
 // Plain JavaScript - No TypeScript
 
-const CACHE_NAME = 'aqsati-v2.1.8'
-const OFFLINE_CACHE = 'aqsati-offline-v2.1.8'
+const CACHE_NAME = 'aqsati-v2.2.0'
+const OFFLINE_CACHE = 'aqsati-offline-v2.2.0'
 
 // الملفات الأساسية للتخزين المؤقت
 const STATIC_ASSETS = [
@@ -15,7 +15,7 @@ const OFFLINE_FALLBACK = '/offline.html'
 
 // تثبيت Service Worker
 self.addEventListener('install', function(event) {
-  console.log('[SW] Installing Service Worker v2.1.8...')
+  console.log('[SW] Installing Service Worker v2.2.0...')
   
   event.waitUntil(
     caches.open(CACHE_NAME)
@@ -24,7 +24,7 @@ self.addEventListener('install', function(event) {
         return cache.addAll(STATIC_ASSETS)
       })
       .then(function() {
-        console.log('[SW] Service Worker installed successfully')
+        console.log('[SW] Service Worker installed successfully - forcing update')
         return self.skipWaiting()
       })
       .catch(function(error) {
@@ -237,4 +237,4 @@ if ('sync' in self) {
   })
 }
 
-console.log('[SW] Service Worker loaded - v2.1.8')
+console.log('[SW] Service Worker loaded - v2.2.0')
