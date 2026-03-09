@@ -15,6 +15,8 @@ const nextConfig: NextConfig = {
     '.preview.space.z.ai',
     'preview-chat-2772e2c2-9ff7-411b-9bfc-ffd42b4d71be.space.z.ai',
     'chat-2772e2c2-9ff7-411b-9bfc-ffd42b4d71be.space.z.ai',
+    '*.space.z.ai',
+    '*.preview.space.z.ai',
   ],
 };
 
