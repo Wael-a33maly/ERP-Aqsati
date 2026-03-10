@@ -5188,6 +5188,18 @@ function InstallmentsManagement() {
     return partialPaymentAmounts.get(instId) ?? fullAmount
   }
   
+  // حساب المتبقي للقسط (يستخدم remainingAmount من قاعدة البيانات أو يحسبه)
+  const getRemainingAmount = (inst: any) => {
+    // نفضل استخدام remainingAmount من قاعدة البيانات إذا كان متوفراً
+    if (inst.remainingAmount !== undefined && inst.remainingAmount !== null) {
+      return inst.remainingAmount
+    }
+    // وإلا نحسبه من المبلغ الإجمالي ناقص المدفوع
+    const amount = inst.amount || 0
+    const paid = inst.paidAmount || 0
+    return Math.max(0, amount - paid)
+  }
+  
   // تحديث قيمة الدفع الجزئي
   const updatePartialAmount = (instId: string, amount: number, maxAmount: number) => {
     const newMap = new Map(partialPaymentAmounts)
@@ -5203,7 +5215,7 @@ function InstallmentsManagement() {
   // تحديد/إلغاء تحديد قسط مع تحديث قيمة الدفع
   const toggleInstallmentSelection = (inst: any, checked: boolean) => {
     const newSet = new Set(selectedInstallments)
-    const remaining = (inst.amount || 0) - (inst.paidAmount || 0)
+    const remaining = getRemainingAmount(inst)
     
     if (checked) {
       newSet.add(inst.id)
@@ -5229,7 +5241,7 @@ function InstallmentsManagement() {
     return filteredInstallments
       .filter((i: any) => selectedInstallments.has(i.id))
       .reduce((sum: number, i: any) => {
-        const remaining = (i.amount || 0) - (i.paidAmount || 0)
+        const remaining = getRemainingAmount(i)
         const partialAmount = getPartialAmount(i.id, remaining)
         return sum + partialAmount
       }, 0)
@@ -5245,9 +5257,9 @@ function InstallmentsManagement() {
   const allCancelled = installments.filter(i => getClassification(i).isCancelled)
 
   const tabStats = {
-    unpaid: { count: allUnpaid.length, amount: allUnpaid.reduce((sum, i) => sum + ((i.amount || 0) - (i.paidAmount || 0)), 0) },
+    unpaid: { count: allUnpaid.length, amount: allUnpaid.reduce((sum, i) => sum + getRemainingAmount(i), 0) },
     paid: { count: allPaid.length, amount: allPaid.reduce((sum, i) => sum + (i.paidAmount || i.amount || 0), 0) },
-    overdue: { count: allOverdue.length, amount: allOverdue.reduce((sum, i) => sum + ((i.amount || 0) - (i.paidAmount || 0)), 0) },
+    overdue: { count: allOverdue.length, amount: allOverdue.reduce((sum, i) => sum + getRemainingAmount(i), 0) },
     cancelled: { count: allCancelled.length, amount: allCancelled.reduce((sum, i) => sum + (i.amount || 0), 0) }
   }
 
@@ -5792,7 +5804,7 @@ function InstallmentsManagement() {
                     const contract = inst.contract || {}
                     const customer = contract.customer || {}
                     const classification = getClassification(inst)
-                    const remaining = (inst.amount || 0) - (inst.paidAmount || 0)
+                    const remaining = getRemainingAmount(inst)
                     
                     return (
                       <TableRow key={inst.id} className={classification.isOverdue ? 'bg-red-50 dark:bg-red-950/20' : ''}>
@@ -5813,6 +5825,7 @@ function InstallmentsManagement() {
                               className="h-8 w-24 mx-auto text-center font-bold text-green-600 border-green-300 focus:border-green-500"
                               min={0}
                               max={remaining}
+                              step="0.01"
                               onClick={(e) => e.stopPropagation()}
                             />
                           </TableCell>
@@ -5913,7 +5926,7 @@ function InstallmentsManagement() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-muted-foreground">المبلغ المستحق:</span>
-                  <span className="font-bold text-green-600">{formatCurrency((collectDialog.amount || 0) - (collectDialog.paidAmount || 0), currency.symbol)}</span>
+                  <span className="font-bold text-green-600">{formatCurrency(getRemainingAmount(collectDialog), currency.symbol)}</span>
                 </div>
               </div>
               

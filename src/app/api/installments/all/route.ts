@@ -48,6 +48,12 @@ export async function GET() {
     return NextResponse.json({
       success: true,
       data: formattedInstallments
+    }, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      }
     })
   } catch (error: any) {
     console.error('Fetch installments error:', error)
