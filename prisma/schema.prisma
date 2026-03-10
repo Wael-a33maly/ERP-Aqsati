@@ -99,12 +99,14 @@ model Branch {
   FromTransfers    InventoryTransfer[] @relation("TransferFromBranch")
   ToTransfers      InventoryTransfer[] @relation("TransferToBranch")
   Invoice          Invoice[]
+  JournalEntry     JournalEntry[]
   Payment          Payment[]
   PurchaseInvoice  PurchaseInvoice[]
   PurchaseReturn   PurchaseReturn[]
   Return           Return[]
   SupplierPayment  SupplierPayment[]
   User             User[]
+  Voucher          Voucher[]
   Warehouse        Warehouse[]
   Zone             Zone[]
 
@@ -171,6 +173,7 @@ model Company {
   active             Boolean            @default(true)
   createdAt          DateTime           @default(now())
   updatedAt DateTime @updatedAt
+  Account            Account[]
   Area               Area[]
   AuditLog           AuditLog[]
   Branch             Branch[]
@@ -182,6 +185,7 @@ model Company {
   Governorate        Governorate[]
   InventoryTransfer  InventoryTransfer[]
   InventoryValuation InventoryValuation[]
+  JournalEntry       JournalEntry[]
   PrintTemplate      PrintTemplate[]
   Product            Product[]
   ProductCategory    ProductCategory[]
@@ -192,6 +196,7 @@ model Company {
   SupplierPayment    SupplierPayment[]
   SupplierTransaction SupplierTransaction[]
   User               User[]
+  Voucher            Voucher[]
   Warehouse          Warehouse[]
   Zone               Zone[]
   Invoice            Invoice[]
@@ -1106,6 +1111,138 @@ model Zone {
   User        User[]     @relation("ZoneAgents")
 
   @@unique([companyId, code])
+}
+
+// =====================================================
+// نماذج المحاسبة - Accounting
+// =====================================================
+
+// شجرة الحسابات
+model Account {
+  id          String    @id @default(cuid())
+  companyId   String
+  code        String
+  name        String
+  nameAr      String?
+  type        String    // ASSET, LIABILITY, EQUITY, REVENUE, EXPENSE
+  parentId    String?
+  isHeader    Boolean   @default(false)  // حساب رئيسي/عنوان
+  balance     Float     @default(0)
+  notes       String?
+  active      Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  Company     Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  Parent      Account?  @relation("AccountToAccount", fields: [parentId], references: [id])
+  Children    Account[] @relation("AccountToAccount")
+  JournalEntryItems JournalEntryItem[]
+  VoucherItems VoucherItem[]
+
+  @@unique([companyId, code])
+  @@index([companyId])
+  @@index([type])
+  @@index([active])
+}
+
+// القيود المحاسبية
+model JournalEntry {
+  id              String            @id @default(cuid())
+  companyId       String
+  branchId        String?
+  entryNumber     String
+  entryDate       DateTime          @default(now())
+  type            String            @default("manual") // manual, auto, opening, closing, adjustment
+  referenceType   String?           // INVOICE, PAYMENT, RECEIPT, etc.
+  referenceId     String?
+  description     String?
+  totalDebit      Float             @default(0)
+  totalCredit     Float             @default(0)
+  status          String            @default("draft") // draft, posted, cancelled
+  postedAt        DateTime?
+  postedBy        String?
+  cancelledAt     DateTime?
+  cancelledBy     String?
+  cancelReason    String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  Company         Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  Branch          Branch?           @relation(fields: [branchId], references: [id])
+  JournalEntryItems JournalEntryItem[]
+
+  @@unique([companyId, entryNumber])
+  @@index([companyId])
+  @@index([entryDate])
+  @@index([status])
+  @@index([type])
+}
+
+// بنود القيد المحاسبي
+model JournalEntryItem {
+  id            String      @id @default(cuid())
+  entryId       String
+  accountId     String
+  description   String?
+  debit         Float       @default(0)
+  credit        Float       @default(0)
+  createdAt     DateTime    @default(now())
+  JournalEntry  JournalEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  Account       Account     @relation(fields: [accountId], references: [id])
+
+  @@index([entryId])
+  @@index([accountId])
+}
+
+// السندات - إيصالات القبض والصرف
+model Voucher {
+  id              String        @id @default(cuid())
+  companyId       String
+  branchId        String?
+  voucherNumber   String
+  voucherType     String        // RECEIPT=سند قبض, PAYMENT=سند صرف
+  voucherDate     DateTime      @default(now())
+  partyType       String        // CUSTOMER, SUPPLIER, EMPLOYEE, OTHER
+  partyId         String?
+  partyName       String
+  amount          Float         @default(0)
+  paymentMethod   String        // CASH, BANK, CHECK, CARD
+  bankId          String?
+  checkNumber     String?
+  checkDate       DateTime?
+  cardType        String?
+  cardNumber      String?
+  referenceType   String?
+  referenceId     String?
+  description     String?
+  status          String        @default("draft") // draft, posted, cancelled
+  postedAt        DateTime?
+  postedBy        String?
+  journalEntryId  String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  Company         Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  Branch          Branch?       @relation(fields: [branchId], references: [id])
+  VoucherItems    VoucherItem[]
+
+  @@unique([companyId, voucherNumber])
+  @@index([companyId])
+  @@index([voucherDate])
+  @@index([voucherType])
+  @@index([status])
+}
+
+// بنود السند (للتوزيع على حسابات متعددة)
+model VoucherItem {
+  id          String    @id @default(cuid())
+  voucherId   String
+  accountId   String
+  description String?
+  amount      Float     @default(0)
+  createdAt   DateTime  @default(now())
+  Voucher     Voucher   @relation(fields: [voucherId], references: [id], onDelete: Cascade)
+  Account     Account   @relation(fields: [accountId], references: [id])
+
+  @@index([voucherId])
+  @@index([accountId])
 }
 
 // =====================================================
