@@ -721,10 +721,307 @@ async function seedDemoCompany() {
     ])
     console.log('✅ Chart of Accounts created:', 5 + childAccounts.length) // 5 headers + child accounts
 
+    // 12. Create Invoices for Installments
+    const today = new Date()
+    const invoices = await Promise.all([
+      // Invoice 1 - Smartphone for Ahmed
+      db.invoice.create({
+        data: {
+          id: 'inv-1',
+          companyId: company.id,
+          branchId: branch.id,
+          customerId: 'cust-1',
+          invoiceNumber: 'INV-001',
+          invoiceDate: new Date(today.getFullYear(), today.getMonth(), 1),
+          type: 'sales',
+          status: 'confirmed',
+          subtotal: 6500,
+          discount: 0,
+          taxRate: 0,
+          taxAmount: 0,
+          total: 6500,
+          paidAmount: 1300, // Down payment
+          remainingAmount: 5200,
+          notes: 'Smartphone purchase - Installment plan',
+        }
+      }),
+      // Invoice 2 - Laptop for Sara
+      db.invoice.create({
+        data: {
+          id: 'inv-2',
+          companyId: company.id,
+          branchId: branch.id,
+          customerId: 'cust-2',
+          invoiceNumber: 'INV-002',
+          invoiceDate: new Date(today.getFullYear(), today.getMonth(), 5),
+          type: 'sales',
+          status: 'confirmed',
+          subtotal: 15000,
+          discount: 0,
+          taxRate: 0,
+          taxAmount: 0,
+          total: 15000,
+          paidAmount: 3000, // Down payment
+          remainingAmount: 12000,
+          notes: 'Laptop purchase - Installment plan',
+        }
+      }),
+      // Invoice 3 - Headphones + T-Shirts for Mahmoud
+      db.invoice.create({
+        data: {
+          id: 'inv-3',
+          companyId: company.id,
+          branchId: branch.id,
+          customerId: 'cust-3',
+          invoiceNumber: 'INV-003',
+          invoiceDate: new Date(today.getFullYear(), today.getMonth(), 10),
+          type: 'sales',
+          status: 'confirmed',
+          subtotal: 2000,
+          discount: 0,
+          taxRate: 0,
+          taxAmount: 0,
+          total: 2000,
+          paidAmount: 500, // Down payment
+          remainingAmount: 1500,
+          notes: 'Electronics and clothing - Installment plan',
+        }
+      }),
+    ])
+    console.log('✅ Invoices created:', invoices.length)
+
+    // Add Invoice Items
+    await Promise.all([
+      // Invoice 1 items
+      db.invoiceItem.create({
+        data: {
+          invoiceId: 'inv-1',
+          productId: 'prod-1', // Smartphone
+          quantity: 1,
+          unitPrice: 6500,
+          total: 6500,
+        }
+      }),
+      // Invoice 2 items
+      db.invoiceItem.create({
+        data: {
+          invoiceId: 'inv-2',
+          productId: 'prod-2', // Laptop
+          quantity: 1,
+          unitPrice: 15000,
+          total: 15000,
+        }
+      }),
+      // Invoice 3 items
+      db.invoiceItem.create({
+        data: {
+          invoiceId: 'inv-3',
+          productId: 'prod-3', // Headphones
+          quantity: 1,
+          unitPrice: 800,
+          total: 800,
+        }
+      }),
+      db.invoiceItem.create({
+        data: {
+          invoiceId: 'inv-3',
+          productId: 'prod-4', // T-Shirt
+          quantity: 5,
+          unitPrice: 180,
+          total: 900,
+        }
+      }),
+    ])
+    console.log('✅ Invoice items created')
+
+    // 13. Create Installment Contracts
+    const contracts = await Promise.all([
+      // Contract 1 - Ahmed - 6 months
+      db.installmentContract.create({
+        data: {
+          id: 'contract-1',
+          invoiceId: 'inv-1',
+          customerId: 'cust-1',
+          contractNumber: 'CNT-2024-001',
+          contractDate: new Date(today.getFullYear(), today.getMonth(), 1),
+          totalAmount: 6500,
+          downPayment: 1300,
+          financedAmount: 5200,
+          numberOfPayments: 6,
+          paymentFrequency: 'MONTHLY',
+          interestRate: 0,
+          interestAmount: 0,
+          startDate: new Date(today.getFullYear(), today.getMonth(), 1),
+          endDate: new Date(today.getFullYear(), today.getMonth() + 6, 1),
+          status: 'active',
+          notes: '6 monthly installments for Smartphone',
+        }
+      }),
+      // Contract 2 - Sara - 12 months
+      db.installmentContract.create({
+        data: {
+          id: 'contract-2',
+          invoiceId: 'inv-2',
+          customerId: 'cust-2',
+          contractNumber: 'CNT-2024-002',
+          contractDate: new Date(today.getFullYear(), today.getMonth(), 5),
+          totalAmount: 15000,
+          downPayment: 3000,
+          financedAmount: 12000,
+          numberOfPayments: 12,
+          paymentFrequency: 'MONTHLY',
+          interestRate: 5,
+          interestAmount: 600,
+          startDate: new Date(today.getFullYear(), today.getMonth(), 5),
+          endDate: new Date(today.getFullYear(), today.getMonth() + 12, 5),
+          status: 'active',
+          notes: '12 monthly installments for Laptop with 5% interest',
+        }
+      }),
+      // Contract 3 - Mahmoud - 3 months
+      db.installmentContract.create({
+        data: {
+          id: 'contract-3',
+          invoiceId: 'inv-3',
+          customerId: 'cust-3',
+          contractNumber: 'CNT-2024-003',
+          contractDate: new Date(today.getFullYear(), today.getMonth(), 10),
+          totalAmount: 2000,
+          downPayment: 500,
+          financedAmount: 1500,
+          numberOfPayments: 3,
+          paymentFrequency: 'MONTHLY',
+          interestRate: 0,
+          interestAmount: 0,
+          startDate: new Date(today.getFullYear(), today.getMonth(), 10),
+          endDate: new Date(today.getFullYear(), today.getMonth() + 3, 10),
+          status: 'active',
+          notes: '3 monthly installments for Electronics and clothing',
+        }
+      }),
+    ])
+    console.log('✅ Installment contracts created:', contracts.length)
+
+    // 14. Create Installments (Payment Schedule)
+    // Contract 1 - 6 installments of 866.67 EGP each
+    for (let i = 1; i <= 6; i++) {
+      await db.installment.create({
+        data: {
+          contractId: 'contract-1',
+          installmentNumber: i,
+          dueDate: new Date(today.getFullYear(), today.getMonth() + i, 1),
+          amount: 866.67,
+          paidAmount: 0,
+          remainingAmount: 866.67,
+          status: i === 1 ? 'overdue' : 'pending',
+        }
+      })
+    }
+
+    // Contract 2 - 12 installments of 1050 EGP each (with interest)
+    for (let i = 1; i <= 12; i++) {
+      await db.installment.create({
+        data: {
+          contractId: 'contract-2',
+          installmentNumber: i,
+          dueDate: new Date(today.getFullYear(), today.getMonth() + i, 5),
+          amount: 1050,
+          paidAmount: 0,
+          remainingAmount: 1050,
+          status: i === 1 ? 'overdue' : 'pending',
+        }
+      })
+    }
+
+    // Contract 3 - 3 installments of 500 EGP each
+    for (let i = 1; i <= 3; i++) {
+      await db.installment.create({
+        data: {
+          contractId: 'contract-3',
+          installmentNumber: i,
+          dueDate: new Date(today.getFullYear(), today.getMonth() + i, 10),
+          amount: 500,
+          paidAmount: i === 1 ? 500 : 0,
+          remainingAmount: i === 1 ? 0 : 500,
+          status: i === 1 ? 'paid' : (i === 2 ? 'overdue' : 'pending'),
+          paidDate: i === 1 ? new Date(today.getFullYear(), today.getMonth(), 15) : null,
+        }
+      })
+    }
+    console.log('✅ Installments created: 6 + 12 + 3 = 21 installments')
+
+    // 15. Create some Installment Payments
+    const installmentPayments = await Promise.all([
+      // Payment for contract 1 - first installment (partial)
+      db.installmentPayment.create({
+        data: {
+          installmentId: (await db.installment.findFirst({
+            where: { contractId: 'contract-1', installmentNumber: 1 }
+          }))!.id,
+          paymentDate: new Date(today.getFullYear(), today.getMonth(), 20),
+          amount: 400,
+          method: 'CASH',
+          notes: 'Partial payment for first installment',
+        }
+      }),
+      // Full payment for contract 3 - first installment
+      db.installmentPayment.create({
+        data: {
+          installmentId: (await db.installment.findFirst({
+            where: { contractId: 'contract-3', installmentNumber: 1 }
+          }))!.id,
+          paymentDate: new Date(today.getFullYear(), today.getMonth(), 15),
+          amount: 500,
+          method: 'BANK_TRANSFER',
+          reference: 'TRX-001',
+          notes: 'Full payment for first installment',
+        }
+      }),
+    ])
+
+    // Update the paid status for contract 1 first installment
+    const contract1Inst1 = await db.installment.findFirst({
+      where: { contractId: 'contract-1', installmentNumber: 1 }
+    })
+    if (contract1Inst1) {
+      await db.installment.update({
+        where: { id: contract1Inst1.id },
+        data: {
+          paidAmount: 400,
+          remainingAmount: 466.67,
+          status: 'partial',
+        }
+      })
+    }
+
+    console.log('✅ Installment payments created:', installmentPayments.length)
+
+    // 16. Update customer balances
+    await db.customer.update({
+      where: { id: 'cust-1' },
+      data: { balance: 5200 - 400 } // financed - partial payment
+    })
+    await db.customer.update({
+      where: { id: 'cust-2' },
+      data: { balance: 12600 } // financed with interest
+    })
+    await db.customer.update({
+      where: { id: 'cust-3' },
+      data: { balance: 1000 } // financed - first installment paid
+    })
+    console.log('✅ Customer balances updated')
+
     console.log('\n🎉 Demo company seed completed successfully!')
     console.log('\n📋 Login Credentials:')
     console.log('   Email: admin@demo.com')
     console.log('   Password: demo123456')
+    console.log('\n📊 Installment Data Summary:')
+    console.log('   - 3 Installment Contracts')
+    console.log('   - 21 Installments (6 + 12 + 3)')
+    console.log('   - 2 Payments recorded')
+    console.log('   - Contract CNT-2024-001: 1 partial payment (400 of 866.67)')
+    console.log('   - Contract CNT-2024-002: No payments yet')
+    console.log('   - Contract CNT-2024-003: First installment fully paid')
 
   } catch (error) {
     console.error('❌ Error seeding demo company:', error)
